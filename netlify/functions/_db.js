@@ -4,12 +4,13 @@ const crypto = require('node:crypto');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 
-const hasSupabase = Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+const supabaseServerKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+const hasSupabase = Boolean(process.env.SUPABASE_URL && supabaseServerKey);
 const useLocalFiles = !hasSupabase && process.env.NETLIFY_DEV === 'true';
 const localRoot = path.join(process.cwd(), '.netlify', 'local-db');
 
 function supabase() {
-  return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+  return createClient(process.env.SUPABASE_URL, supabaseServerKey, {
     auth: { persistSession: false }
   });
 }
@@ -135,21 +136,55 @@ async function listGifts() {
 }
 
 async function saveGifts(gifts) {
+  const records = gifts.map((gift, index) => ({
+    id: String(gift.id || `gift-${index}`),
+    name: String(gift.name || '').trim(),
+    price: Number(gift.price || gift.amount || 0),
+    image: String(gift.image || gift.img || ''),
+    store: String(gift.store || 'Contribuicao especial'),
+    special: Boolean(gift.special || gift.comic),
+    active: gift.active !== false,
+    purchased: Boolean(gift.purchased),
+    purchased_order_id: gift.purchased_order_id || null
+  })).filter((gift) => gift.name && gift.price > 0);
+
   if (hasSupabase) {
-    const { error } = await supabase()
+    const incomingIds = records.map((gift) => gift.id);
+    const { data: current, error: currentError } = await supabase()
       .from('wedding_gifts')
-      .upsert(gifts, { onConflict: 'id' });
-    if (error) throw error;
-    return gifts;
+      .select('id')
+      .eq('active', true);
+    if (currentError) throw currentError;
+
+    const removedIds = (current || [])
+      .map((gift) => gift.id)
+      .filter((id) => !incomingIds.includes(id));
+
+    if (removedIds.length) {
+      const { error } = await supabase()
+        .from('wedding_gifts')
+        .update({ active: false, updated_at: nowIso() })
+        .in('id', removedIds);
+      if (error) throw error;
+    }
+
+    if (records.length) {
+      const { error } = await supabase()
+        .from('wedding_gifts')
+        .upsert(records, { onConflict: 'id' });
+      if (error) throw error;
+    }
+
+    return listGifts();
   }
 
   if (useLocalFiles) {
-    await writeLocal('wedding-gifts', 'catalog', gifts);
-    return gifts;
+    await writeLocal('wedding-gifts', 'catalog', records);
+    return records;
   }
 
-  await getStore('wedding-gifts').setJSON('catalog', gifts);
-  return gifts;
+  await getStore('wedding-gifts').setJSON('catalog', records);
+  return records;
 }
 
 async function saveRsvp(rsvp) {

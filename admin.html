@@ -14,6 +14,7 @@
     .login,.summary,.table-wrap{background:#fff;border:1px solid var(--line);border-radius:6px;padding:18px;margin-bottom:18px}
     label{display:block;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
     input{width:100%;border:1px solid var(--line);padding:12px;font:inherit}
+    input[type="checkbox"]{width:auto;transform:scale(1.2)}
     button{border:0;background:var(--gold);color:var(--dark);font-weight:700;text-transform:uppercase;letter-spacing:.12em;padding:12px 16px;cursor:pointer}
     .login-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end}
     .summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
@@ -21,7 +22,11 @@
     table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;border-bottom:1px solid var(--line);padding:12px;vertical-align:top}th{font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:var(--muted)}
     .items{max-width:340px}.status{font-weight:700;color:var(--gold)}.error{color:#9b1c1c;margin-top:10px}.muted{color:var(--muted)}
     h2{font-family:"Cormorant Garamond",serif;font-size:28px;font-weight:400;margin:0 0 12px;color:var(--dark)}
-    @media (max-width:760px){.login-row,.summary{grid-template-columns:1fr}.table-wrap{overflow-x:auto}table{min-width:780px}}
+    .section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+    .gift-form{display:grid;grid-template-columns:1.2fr 1.4fr .7fr .5fr auto;gap:10px;align-items:end;margin-bottom:12px}
+    .gift-thumb{width:72px;height:54px;object-fit:cover;border:1px solid var(--line);background:var(--cream)}
+    .ghost{background:#fff;border:1px solid var(--gold)}
+    @media (max-width:760px){.login-row,.summary,.gift-form{grid-template-columns:1fr}.table-wrap{overflow-x:auto}table{min-width:920px}}
   </style>
 </head>
 <body>
@@ -47,10 +52,27 @@
       <div class="metric"><b id="guestCount">0</b><span>Convidados</span></div>
     </section>
     <section class="table-wrap">
+      <div class="section-head">
+        <h2>Cadastro de presentes</h2>
+        <button id="saveGiftsBtn">Salvar presentes</button>
+      </div>
+      <div class="gift-form">
+        <div><label for="giftImage">Imagem</label><input id="giftImage" placeholder="https://..."></div>
+        <div><label for="giftName">Nome</label><input id="giftName" placeholder="Nome do presente"></div>
+        <div><label for="giftValue">Valor</label><input id="giftValue" placeholder="450,00"></div>
+        <div><label for="giftSpecial">Especial</label><input id="giftSpecial" type="checkbox"></div>
+        <button id="addGiftBtn" class="ghost">Adicionar</button>
+      </div>
+      <table>
+        <thead><tr><th>Imagem</th><th>Nome</th><th>Valor</th><th>Especial</th><th>Ações</th></tr></thead>
+        <tbody id="gifts"><tr><td colspan="5" class="muted">Informe o token para carregar.</td></tr></tbody>
+      </table>
+    </section>
+    <section class="table-wrap">
       <h2>Presentes</h2>
       <table>
-        <thead><tr><th>Data</th><th>Status</th><th>Cliente</th><th>Valor</th><th>Presentes</th></tr></thead>
-        <tbody id="orders"><tr><td colspan="5" class="muted">Informe o token para carregar.</td></tr></tbody>
+        <thead><tr><th>Data</th><th>Status</th><th>Método</th><th>Cliente</th><th>Valor</th><th>Presentes</th><th>Ações</th></tr></thead>
+        <tbody id="orders"><tr><td colspan="7" class="muted">Informe o token para carregar.</td></tr></tbody>
       </table>
     </section>
     <section class="table-wrap">
@@ -65,26 +87,91 @@
     const fmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
     const tokenInput = document.getElementById('token');
     const errorEl = document.getElementById('error');
+    let giftCatalog = [];
     tokenInput.value = localStorage.getItem('weddingAdminToken') || '';
 
     function money(cents){ return fmt.format((Number(cents) || 0) / 100); }
+    function centsFromBRL(value){
+      const normalized = String(value || '').replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.');
+      return Math.round((Number.parseFloat(normalized) || 0) * 100);
+    }
     function itemText(items){ return (items || []).map((item) => item.name).join(', '); }
+    function renderGifts(){
+      document.getElementById('gifts').innerHTML = giftCatalog.length ? giftCatalog.map((gift, index) => `
+        <tr>
+          <td><img class="gift-thumb" src="${gift.image || gift.img || ''}" alt="" onerror="this.style.display='none'"></td>
+          <td>${gift.name || ''}</td>
+          <td>${money(gift.price)}</td>
+          <td>${gift.special ? 'Sim' : 'Não'}</td>
+          <td><button class="ghost" onclick="removeGift(${index})">Remover</button></td>
+        </tr>
+      `).join('') : '<tr><td colspan="5" class="muted">Nenhum presente cadastrado.</td></tr>';
+    }
+    function addGift(){
+      const image = document.getElementById('giftImage').value.trim();
+      const name = document.getElementById('giftName').value.trim();
+      const price = centsFromBRL(document.getElementById('giftValue').value.trim());
+      const special = document.getElementById('giftSpecial').checked;
+      if(!name || !price){ errorEl.textContent = 'Informe nome e valor do presente.'; return; }
+      giftCatalog.push({ id: crypto.randomUUID(), image, name, price, special, store: special ? 'Contribuição especial' : 'Presente de casamento', active: true });
+      document.getElementById('giftImage').value = '';
+      document.getElementById('giftName').value = '';
+      document.getElementById('giftValue').value = '';
+      document.getElementById('giftSpecial').checked = false;
+      errorEl.textContent = '';
+      renderGifts();
+    }
+    function removeGift(index){
+      giftCatalog.splice(index, 1);
+      renderGifts();
+    }
+    async function saveGifts(){
+      const token = tokenInput.value.trim();
+      if(!token){ errorEl.textContent = 'Informe o ADMIN_TOKEN.'; return; }
+      const res = await fetch('/api/gifts', {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+        body: JSON.stringify({ gifts: giftCatalog })
+      });
+      const data = await res.json();
+      if(!res.ok){ errorEl.textContent = data.error || 'Não foi possível salvar presentes.'; return; }
+      giftCatalog = data.gifts || [];
+      renderGifts();
+      errorEl.textContent = 'Presentes salvos.';
+    }
+    async function markOrderPaid(id){
+      const token = tokenInput.value.trim();
+      if(!token){ errorEl.textContent = 'Informe o ADMIN_TOKEN.'; return; }
+      const res = await fetch('/api/admin-orders', {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+        body: JSON.stringify({ id, status: 'paid' })
+      });
+      const data = await res.json();
+      if(!res.ok){ errorEl.textContent = data.error || 'Não foi possível confirmar pagamento.'; return; }
+      errorEl.textContent = 'Pagamento confirmado.';
+      loadOrders();
+    }
 
     async function loadOrders(){
       const token = tokenInput.value.trim();
       if(!token){ errorEl.textContent = 'Informe o ADMIN_TOKEN.'; return; }
       localStorage.setItem('weddingAdminToken', token);
       errorEl.textContent = '';
-      const [ordersRes, rsvpsRes] = await Promise.all([
+      const [ordersRes, rsvpsRes, giftsRes] = await Promise.all([
         fetch('/api/admin-orders', { headers: { Authorization: `Bearer ${token}` } }),
-        fetch('/api/admin-rsvps', { headers: { Authorization: `Bearer ${token}` } })
+        fetch('/api/admin-rsvps', { headers: { Authorization: `Bearer ${token}` } }),
+        fetch('/api/gifts')
       ]);
       const ordersData = await ordersRes.json();
       const rsvpsData = await rsvpsRes.json();
+      const giftsData = await giftsRes.json();
       if(!ordersRes.ok){ errorEl.textContent = ordersData.error || 'Não foi possível carregar presentes.'; return; }
       if(!rsvpsRes.ok){ errorEl.textContent = rsvpsData.error || 'Não foi possível carregar presenças.'; return; }
       const orders = ordersData.orders || [];
       const rsvps = rsvpsData.rsvps || [];
+      giftCatalog = giftsData.gifts || [];
+      renderGifts();
       const paid = orders.filter((order) => order.status === 'paid');
       document.getElementById('paidTotal').textContent = money(paid.reduce((sum, order) => sum + Number(order.amount_total || 0), 0));
       document.getElementById('paidCount').textContent = paid.length;
@@ -94,11 +181,13 @@
         <tr>
           <td>${new Date(order.created_at || order.updated_at).toLocaleString('pt-BR')}</td>
           <td class="status">${order.status}</td>
+          <td>${order.payment_method || ''}</td>
           <td>${order.customer_name || ''}<br><span class="muted">${order.customer_email || ''}</span></td>
           <td>${money(order.amount_total)}</td>
           <td class="items">${itemText(order.items)}</td>
+          <td>${order.status === 'pix_pending' ? `<button class="ghost" onclick="markOrderPaid('${order.id}')">Marcar pago</button>` : ''}</td>
         </tr>
-      `).join('') : '<tr><td colspan="5" class="muted">Nenhum pedido ainda.</td></tr>';
+      `).join('') : '<tr><td colspan="7" class="muted">Nenhum pedido ainda.</td></tr>';
       document.getElementById('rsvps').innerHTML = rsvps.length ? rsvps.map((rsvp) => `
         <tr>
           <td>${new Date(rsvp.created_at || rsvp.updated_at).toLocaleString('pt-BR')}</td>
@@ -112,6 +201,8 @@
 
     document.getElementById('saveTokenBtn').addEventListener('click', loadOrders);
     document.getElementById('refreshBtn').addEventListener('click', loadOrders);
+    document.getElementById('addGiftBtn').addEventListener('click', addGift);
+    document.getElementById('saveGiftsBtn').addEventListener('click', saveGifts);
     if(tokenInput.value) loadOrders();
   </script>
 </body>

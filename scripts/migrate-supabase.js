@@ -17,7 +17,7 @@ function migrationSql() {
 async function runWithPg(sql) {
   const { Client } = require('pg');
   const client = new Client({
-    connectionString: process.env.SUPABASE_DB_URL,
+    connectionString: normalizedDatabaseUrl(),
     ssl: { rejectUnauthorized: false }
   });
   await client.connect();
@@ -25,6 +25,20 @@ async function runWithPg(sql) {
     await client.query(sql);
   } finally {
     await client.end();
+  }
+}
+
+function normalizedDatabaseUrl() {
+  const raw = process.env.SUPABASE_DB_URL;
+  try {
+    new URL(raw);
+    return raw;
+  } catch (error) {
+    const authStart = raw.indexOf('://');
+    const authEnd = raw.lastIndexOf('@');
+    const passwordStart = raw.indexOf(':', authStart + 3);
+    if (authStart === -1 || authEnd === -1 || passwordStart === -1 || passwordStart > authEnd) throw error;
+    return `${raw.slice(0, passwordStart + 1)}${encodeURIComponent(raw.slice(passwordStart + 1, authEnd))}${raw.slice(authEnd)}`;
   }
 }
 

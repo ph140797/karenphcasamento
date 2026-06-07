@@ -124,6 +124,7 @@ function toggleMusic(){if(!ytPlayer)return;const icon=document.getElementById('m
 function showSection(id){document.querySelectorAll('section').forEach(s=>s.classList.remove('active'));const sec=document.getElementById(id);sec.classList.add('active');if(id==='hero'){window.scrollTo({top:0,behavior:'smooth'});return;}requestAnimationFrame(()=>{const top=sec.getBoundingClientRect().top+window.scrollY-104;window.scrollTo({top:Math.max(0,top),behavior:'smooth'});});}
 let cart=[];
 const PIX_KEY='11953396177';
+const PIX_QR_CODE_IMAGE='/assets/pix-qr-code.png';
 function cartTotal(){return cart.reduce((s,i)=>s+parseFloat(i.price.replace('R$ ','').replace(/\./g,'').replace(',','.')),0);}
 function fmtBRL(v){return 'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function updateCartUI(){
@@ -135,14 +136,14 @@ function updateCartUI(){
   else bar.classList.remove('visible');
   renderCartModal();
   document.querySelectorAll('.gift-card').forEach(card=>{
-    const idx=parseInt(card.dataset.idx),qty=cart.filter(c=>c.idx===idx).length;
+    const idx=parseInt(card.dataset.idx),giftId=card.dataset.giftId||String(idx),qty=cart.filter(c=>c.idx===idx).length;
     const btn=card.querySelector('.gift-btn-add'),rmv=card.querySelector('.gift-btn-remove'),badge=card.querySelector('.in-cart-badge');
-  if(paidGiftIds.has(String(idx))){btn.textContent='Presente já pago';btn.classList.add('added');btn.disabled=true;badge&&badge.classList.remove('show');rmv&&rmv.classList.remove('show');return;}
+  if(paidGiftIds.has(giftId)){btn.textContent='Presente já pago';btn.classList.add('added');btn.disabled=true;badge&&badge.classList.remove('show');rmv&&rmv.classList.remove('show');return;}
     if(qty>0){btn.textContent='✓ No carrinho';btn.classList.add('added');badge&&badge.classList.add('show');rmv&&rmv.classList.add('show');}
     else{btn.textContent='Adicionar ao carrinho';btn.classList.remove('added');badge&&badge.classList.remove('show');rmv&&rmv.classList.remove('show');}
   });
 }
-function addToCart(idx){if(paidGiftIds.has(String(idx))){toast('Este presente já foi pago.');return;}cart.push({idx,name:gifts[idx].name,price:gifts[idx].price,img:gifts[idx].img});updateCartUI();toast('Adicionado ao carrinho! 🛒');}
+function addToCart(idx){const g=normalizeGift(gifts[idx],idx),giftId=String(g.id);if(paidGiftIds.has(giftId)){toast('Este presente já foi pago.');return;}cart.push({idx,id:giftId,name:g.name,price:g.price,img:g.img});updateCartUI();toast('Adicionado ao carrinho! 🛒');}
 function removeFromCartByIdx(idx){for(let i=cart.length-1;i>=0;i--){if(cart[i].idx===idx){cart.splice(i,1);break;}}updateCartUI();toast('Item removido');}
 function removeFromCart(i){cart.splice(i,1);updateCartUI();}
 function renderCartModal(){
@@ -155,11 +156,24 @@ function openCart(){document.getElementById('cartModal').classList.add('open');r
 function closeCart(){document.getElementById('cartModal').classList.remove('open');}
 function addMoreItems(){closeCart();showSection('presentes');}
 
-/* STRIPE CHECKOUT */
+/* CHECKOUT */
 async function openPix(){
   if(!cart.length){toast('Adicione presentes primeiro!');return;}
-  const checkoutCart=cart.map(item=>({id:item.idx,name:item.name,price:item.price,img:item.img}));
   closeCart();
+  document.getElementById('pixOrderItems').innerHTML=cart.map(item=>`<div class="pix-order-item"><span>${item.name.length>38?item.name.substring(0,38)+'...':item.name}</span><span>${item.price}</span></div>`).join('');
+  document.getElementById('pixOrderTotal').innerHTML=`<span>Total a pagar</span><span>${fmtBRL(cartTotal())}</span>`;
+  document.querySelectorAll('.pix-key-wrap,.pix-divider,.pix-step,.pix-upload-area,.pix-message-wrap,#pixFinishBtn').forEach(el=>el.style.display='none');
+  const order=document.querySelector('.pix-order');
+  if(order&&!document.getElementById('checkoutChoice')){
+    order.insertAdjacentHTML('afterend',`<div id="checkoutChoice"><div style="margin:1rem 0;padding:1rem;border:1px solid var(--gold-light);background:var(--white);text-align:center"><div style="font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold-dark);font-weight:700;margin-bottom:.75rem">Pix por QR Code</div><img id="pixQrCode" src="${PIX_QR_CODE_IMAGE}" alt="QR Code Pix" style="display:block;width:min(320px,100%);margin:0 auto 1rem;border:1px solid var(--cream-mid)" onerror="this.style.display='none'"><p style="font-size:13px;line-height:1.8;color:var(--text-mid);margin-bottom:.75rem">Escaneie o QR Code no app do seu banco e informe exatamente o total mostrado acima.</p><button class="pix-copy-btn" onclick="copyPix(this)">Copiar chave Pix</button><button class="pix-finish-btn show" style="display:block;margin-top:.75rem" onclick="confirmPixPayment()">Já fiz o Pix</button></div><button class="cart-modal-pay" onclick="openStripeCheckout()">Pagar com cartão de crédito</button></div>`);
+  }
+  document.getElementById('pixMainContent').style.display='block';
+  document.getElementById('pixSuccess').classList.remove('show');
+  document.getElementById('pixModalBg').classList.add('open');
+}
+async function openStripeCheckout(){
+  if(!cart.length){toast('Adicione presentes primeiro!');return;}
+  const checkoutCart=cart.map(item=>({id:item.id||item.idx,name:item.name,price:item.price,img:item.img}));
   toast('Abrindo checkout seguro...');
   try{
     const res=await fetch('/api/create-checkout-session',{
@@ -174,16 +188,29 @@ async function openPix(){
     toast(err.message||'Erro ao iniciar o checkout.');
   }
 }
+async function confirmPixPayment(){
+  if(!cart.length){toast('Adicione presentes primeiro!');return;}
+  const pixCart=cart.map(item=>({id:item.id||item.idx,name:item.name,price:item.price,img:item.img}));
+  try{
+    const res=await fetch('/api/pix-order',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({items:pixCart})});
+    const data=await res.json();
+    if(!res.ok)throw new Error(data.error||'Não foi possível registrar o Pix.');
+    document.getElementById('pixMainContent').style.display='none';
+    document.getElementById('pixSuccess').classList.add('show');
+    cart=[];updateCartUI();loadPaidGifts();
+    toast('Pix registrado! Os noivos vão conferir o pagamento.');
+  }catch(err){toast(err.message||'Erro ao registrar Pix.');}
+}
 function closePix(){document.getElementById('pixModalBg').classList.remove('open');}
-function copyPix(){
+function copyPix(clickedButton){
   const key=PIX_KEY;
   navigator.clipboard.writeText(key).then(()=>{
-    const btn=document.getElementById('pixCopyBtn');btn.textContent='✓ Chave copiada!';btn.classList.add('copied');
+    const btn=clickedButton||document.getElementById('pixCopyBtn');btn.textContent='✓ Chave copiada!';btn.classList.add('copied');
     setTimeout(()=>{btn.textContent='Copiar chave Pix';btn.classList.remove('copied');},3000);
     toast('Chave Pix copiada! Faça o pagamento no seu banco.');
   }).catch(()=>{
     const el=document.createElement('textarea');el.value=key;document.body.appendChild(el);el.select();document.execCommand('copy');document.body.removeChild(el);
-    const btn=document.getElementById('pixCopyBtn');btn.textContent='✓ Copiado!';btn.classList.add('copied');
+    const btn=clickedButton||document.getElementById('pixCopyBtn');btn.textContent='✓ Copiado!';btn.classList.add('copied');
     setTimeout(()=>{btn.textContent='Copiar chave Pix';btn.classList.remove('copied');},3000);
   });
 }
@@ -262,9 +289,12 @@ async function cfSubmit(){
 }
 const PH='https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=400&q=80';
 let paidGiftIds=new Set();
-function render(){document.getElementById('giftsGrid').innerHTML=gifts.map((g,i)=>`<div class="gift-card${g.comic?' comic':''}" data-idx="${i}"><div class="in-cart-badge">No carrinho</div><img class="gift-img" src="${g.img||PH}" alt="${g.name}" onerror="this.src=PH"><div class="gift-body">${g.comic?'<span class="comic-tag">&#127881; Especial</span>':''}<div class="gift-name">${g.name}</div><div class="gift-price">${g.price}</div><div class="gift-store">${paidGiftIds.has(String(i))?'Presente já pago':g.store}</div><div class="gift-btn-row"><button class="gift-btn-add" onclick="addToCart(${i})"${paidGiftIds.has(String(i))?' disabled':''}>${paidGiftIds.has(String(i))?'Presente já pago':'Adicionar ao carrinho'}</button><button class="gift-btn-remove" onclick="removeFromCartByIdx(${i})" title="Remover">&#10005;</button></div></div></div>`).join('');updateCartUI();}
-async function loadPaidGifts(){try{const res=await fetch('/api/paid-gifts');const data=await res.json();if(res.ok){paidGiftIds=new Set((data.paidGiftIds||[]).map(String));cart=cart.filter(item=>!paidGiftIds.has(String(item.idx)));render();}}catch(e){}}
+function normalizeGift(g,i){const cents=Number(g.price||g.amount||0);return{name:g.name,price:typeof g.price==='string'?g.price:fmtBRL(cents/100),store:g.store||'Contribuição especial',img:g.img||g.image||PH,comic:Boolean(g.comic||g.special),id:g.id||String(i)}}
+function render(){document.getElementById('giftsGrid').innerHTML=gifts.map((raw,i)=>{const g=normalizeGift(raw,i),giftId=String(g.id);return`<div class="gift-card${g.comic?' comic':''}" data-idx="${i}" data-gift-id="${giftId}"><div class="in-cart-badge">No carrinho</div><img class="gift-img" src="${g.img||PH}" alt="${g.name}" onerror="this.src=PH"><div class="gift-body">${g.comic?'<span class="comic-tag">&#127881; Especial</span>':''}<div class="gift-name">${g.name}</div><div class="gift-price">${g.price}</div><div class="gift-store">${paidGiftIds.has(giftId)?'Presente já pago':g.store}</div><div class="gift-btn-row"><button class="gift-btn-add" onclick="addToCart(${i})"${paidGiftIds.has(giftId)?' disabled':''}>${paidGiftIds.has(giftId)?'Presente já pago':'Adicionar ao carrinho'}</button><button class="gift-btn-remove" onclick="removeFromCartByIdx(${i})" title="Remover">&#10005;</button></div></div></div>`}).join('');updateCartUI();}
+async function loadPaidGifts(){try{const res=await fetch('/api/paid-gifts');const data=await res.json();if(res.ok){paidGiftIds=new Set((data.paidGiftIds||[]).map(String));cart=cart.filter(item=>!paidGiftIds.has(String(item.id||item.idx)));render();}}catch(e){}}
+async function loadGiftCatalog(){try{const res=await fetch('/api/gifts');const data=await res.json();if(res.ok&&Array.isArray(data.gifts)&&data.gifts.length){gifts=data.gifts.map(normalizeGift);render();loadPaidGifts();}}catch(e){}}
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500);}
 render();
+loadGiftCatalog();
 loadPaidGifts();
 </script></body></html>

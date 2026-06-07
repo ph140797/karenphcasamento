@@ -53,7 +53,7 @@ exports.handler = async (event) => {
 
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
-      automatic_payment_methods: { enabled: true },
+      payment_method_types: ['card'],
       line_items: items.map((item) => ({
         quantity: 1,
         price_data: {
@@ -75,6 +75,7 @@ exports.handler = async (event) => {
     await saveOrder({
       id: orderId,
       status: 'checkout_created',
+      payment_method: 'card',
       amount_total: amountTotal,
       currency,
       items,
