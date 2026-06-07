@@ -66,6 +66,7 @@ exports.handler = async (event) => {
         }
       })),
       metadata: { order_id: orderId },
+      locale: 'pt-BR',
       allow_promotion_codes: false,
       billing_address_collection: 'auto',
       success_url: `${origin}/success.html?session_id={CHECKOUT_SESSION_ID}`,
