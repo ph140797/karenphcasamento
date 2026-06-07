@@ -1,5 +1,6 @@
 const { getStore } = require('@netlify/blobs');
 const { createClient } = require('@supabase/supabase-js');
+const crypto = require('node:crypto');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 
@@ -108,7 +109,9 @@ async function listOrders() {
 async function updateOrder(id, patch) {
   const current = await getOrder(id);
   if (!current) return null;
-  return saveOrder({ ...current, ...patch, id });
+  const updated = await saveOrder({ ...current, ...patch, id });
+  if (updated.status === 'paid') await markGiftsPurchased(updated.items || [], updated.id);
+  return updated;
 }
 
 async function listGifts() {
@@ -149,10 +152,82 @@ async function saveGifts(gifts) {
   return gifts;
 }
 
+async function saveRsvp(rsvp) {
+  const record = { ...rsvp, updated_at: nowIso() };
+
+  if (hasSupabase) {
+    const { data, error } = await supabase()
+      .from('wedding_rsvps')
+      .insert(record)
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
+  if (useLocalFiles) {
+    const id = record.id || crypto.randomUUID();
+    await writeLocal('wedding-rsvps', id, { ...record, id });
+    return { ...record, id };
+  }
+
+  const id = record.id || crypto.randomUUID();
+  await getStore('wedding-rsvps').setJSON(id, { ...record, id });
+  return { ...record, id };
+}
+
+async function listRsvps() {
+  if (hasSupabase) {
+    const { data, error } = await supabase()
+      .from('wedding_rsvps')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  }
+
+  if (useLocalFiles) {
+    return (await listLocal('wedding-rsvps'))
+      .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+  }
+
+  const store = getStore('wedding-rsvps');
+  const { blobs } = await store.list();
+  const rsvps = await Promise.all(blobs.map((blob) => store.get(blob.key, { type: 'json' })));
+  return rsvps.filter(Boolean).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+}
+
+async function markGiftsPurchased(items, orderId) {
+  const ids = (items || []).map((item) => String(item.id)).filter(Boolean);
+  if (!ids.length) return;
+
+  if (hasSupabase) {
+    const { error } = await supabase()
+      .from('wedding_gifts')
+      .update({ purchased: true, purchased_order_id: orderId, updated_at: nowIso() })
+      .in('id', ids);
+    if (error) throw error;
+  }
+}
+
+async function listPaidGiftIds() {
+  const orders = await listOrders();
+  return Array.from(new Set(
+    orders
+      .filter((order) => order.status === 'paid')
+      .flatMap((order) => order.items || [])
+      .map((item) => String(item.id))
+      .filter(Boolean)
+  ));
+}
+
 module.exports = {
   getOrder,
   listGifts,
   listOrders,
+  listPaidGiftIds,
+  listRsvps,
+  saveRsvp,
   saveGifts,
   saveOrder,
   updateOrder

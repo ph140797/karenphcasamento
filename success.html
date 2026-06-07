@@ -12,9 +12,37 @@
 </head>
 <body>
   <main>
-    <h1>Presente confirmado</h1>
-    <p>Obrigado pelo carinho. O pagamento foi processado pelo Stripe e aparecerá no painel administrativo assim que o webhook confirmar a transação.</p>
+    <h1 id="title">Confirmando pagamento</h1>
+    <p id="message">Estamos verificando a confirmação segura do Stripe.</p>
     <a href="/">Voltar ao site</a>
   </main>
+  <script>
+    async function verify(){
+      const sessionId = new URLSearchParams(location.search).get('session_id');
+      const title = document.getElementById('title');
+      const message = document.getElementById('message');
+      if(!sessionId){
+        title.textContent = 'Pagamento não localizado';
+        message.textContent = 'Não recebemos o identificador do checkout. Confira o painel administrativo ou tente novamente.';
+        return;
+      }
+      try{
+        const res = await fetch('/api/verify-session?session_id=' + encodeURIComponent(sessionId));
+        const data = await res.json();
+        if(!res.ok) throw new Error(data.error || 'Não foi possível verificar.');
+        if(data.paid){
+          title.textContent = 'Presente confirmado';
+          message.textContent = 'Obrigado pelo carinho. O pagamento foi confirmado e registrado para os noivos.';
+        }else{
+          title.textContent = 'Pagamento em processamento';
+          message.textContent = 'O Stripe ainda não marcou o pagamento como concluído. O painel será atualizado assim que a confirmação chegar.';
+        }
+      }catch(error){
+        title.textContent = 'Erro na confirmação';
+        message.textContent = error.message || 'Não foi possível confirmar agora.';
+      }
+    }
+    verify();
+  </script>
 </body>
 </html>

@@ -16,10 +16,11 @@
     input{width:100%;border:1px solid var(--line);padding:12px;font:inherit}
     button{border:0;background:var(--gold);color:var(--dark);font-weight:700;text-transform:uppercase;letter-spacing:.12em;padding:12px 16px;cursor:pointer}
     .login-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end}
-    .summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+    .summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
     .metric{border-left:2px solid var(--gold);padding-left:12px}.metric b{display:block;font-size:24px}.metric span{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em}
     table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;border-bottom:1px solid var(--line);padding:12px;vertical-align:top}th{font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:var(--muted)}
     .items{max-width:340px}.status{font-weight:700;color:var(--gold)}.error{color:#9b1c1c;margin-top:10px}.muted{color:var(--muted)}
+    h2{font-family:"Cormorant Garamond",serif;font-size:28px;font-weight:400;margin:0 0 12px;color:var(--dark)}
     @media (max-width:760px){.login-row,.summary{grid-template-columns:1fr}.table-wrap{overflow-x:auto}table{min-width:780px}}
   </style>
 </head>
@@ -43,11 +44,20 @@
       <div class="metric"><b id="paidTotal">R$ 0,00</b><span>Total pago</span></div>
       <div class="metric"><b id="paidCount">0</b><span>Pagamentos</span></div>
       <div class="metric"><b id="pendingCount">0</b><span>Pendentes</span></div>
+      <div class="metric"><b id="guestCount">0</b><span>Convidados</span></div>
     </section>
     <section class="table-wrap">
+      <h2>Presentes</h2>
       <table>
         <thead><tr><th>Data</th><th>Status</th><th>Cliente</th><th>Valor</th><th>Presentes</th></tr></thead>
         <tbody id="orders"><tr><td colspan="5" class="muted">Informe o token para carregar.</td></tr></tbody>
+      </table>
+    </section>
+    <section class="table-wrap">
+      <h2>Presenças</h2>
+      <table>
+        <thead><tr><th>Data</th><th>Nome</th><th>WhatsApp</th><th>Pessoas</th><th>Acompanhantes</th></tr></thead>
+        <tbody id="rsvps"><tr><td colspan="5" class="muted">Informe o token para carregar.</td></tr></tbody>
       </table>
     </section>
   </main>
@@ -65,14 +75,21 @@
       if(!token){ errorEl.textContent = 'Informe o ADMIN_TOKEN.'; return; }
       localStorage.setItem('weddingAdminToken', token);
       errorEl.textContent = '';
-      const res = await fetch('/api/admin-orders', { headers: { Authorization: `Bearer ${token}` } });
-      const data = await res.json();
-      if(!res.ok){ errorEl.textContent = data.error || 'Não foi possível carregar.'; return; }
-      const orders = data.orders || [];
+      const [ordersRes, rsvpsRes] = await Promise.all([
+        fetch('/api/admin-orders', { headers: { Authorization: `Bearer ${token}` } }),
+        fetch('/api/admin-rsvps', { headers: { Authorization: `Bearer ${token}` } })
+      ]);
+      const ordersData = await ordersRes.json();
+      const rsvpsData = await rsvpsRes.json();
+      if(!ordersRes.ok){ errorEl.textContent = ordersData.error || 'Não foi possível carregar presentes.'; return; }
+      if(!rsvpsRes.ok){ errorEl.textContent = rsvpsData.error || 'Não foi possível carregar presenças.'; return; }
+      const orders = ordersData.orders || [];
+      const rsvps = rsvpsData.rsvps || [];
       const paid = orders.filter((order) => order.status === 'paid');
       document.getElementById('paidTotal').textContent = money(paid.reduce((sum, order) => sum + Number(order.amount_total || 0), 0));
       document.getElementById('paidCount').textContent = paid.length;
       document.getElementById('pendingCount').textContent = orders.filter((order) => order.status !== 'paid').length;
+      document.getElementById('guestCount').textContent = rsvps.reduce((sum, rsvp) => sum + Number(rsvp.guest_count || 1), 0);
       document.getElementById('orders').innerHTML = orders.length ? orders.map((order) => `
         <tr>
           <td>${new Date(order.created_at || order.updated_at).toLocaleString('pt-BR')}</td>
@@ -82,6 +99,15 @@
           <td class="items">${itemText(order.items)}</td>
         </tr>
       `).join('') : '<tr><td colspan="5" class="muted">Nenhum pedido ainda.</td></tr>';
+      document.getElementById('rsvps').innerHTML = rsvps.length ? rsvps.map((rsvp) => `
+        <tr>
+          <td>${new Date(rsvp.created_at || rsvp.updated_at).toLocaleString('pt-BR')}</td>
+          <td>${rsvp.name || ''}</td>
+          <td>${rsvp.phone || ''}</td>
+          <td>${rsvp.guest_count || 1}</td>
+          <td class="items">${(rsvp.guests || []).slice(1).join(', ')}</td>
+        </tr>
+      `).join('') : '<tr><td colspan="5" class="muted">Nenhuma presença confirmada ainda.</td></tr>';
     }
 
     document.getElementById('saveTokenBtn').addEventListener('click', loadOrders);

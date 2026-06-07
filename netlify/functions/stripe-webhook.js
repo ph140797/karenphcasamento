@@ -24,6 +24,7 @@ exports.handler = async (event) => {
     await updateOrder(orderId, {
       status: 'paid',
       stripe_session_id: session.id,
+      stripe_payment_intent: session.payment_intent,
       customer_email: session.customer_details && session.customer_details.email,
       customer_name: session.customer_details && session.customer_details.name
     });

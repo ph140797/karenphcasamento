@@ -137,11 +137,12 @@ function updateCartUI(){
   document.querySelectorAll('.gift-card').forEach(card=>{
     const idx=parseInt(card.dataset.idx),qty=cart.filter(c=>c.idx===idx).length;
     const btn=card.querySelector('.gift-btn-add'),rmv=card.querySelector('.gift-btn-remove'),badge=card.querySelector('.in-cart-badge');
+  if(paidGiftIds.has(String(idx))){btn.textContent='Presente já pago';btn.classList.add('added');btn.disabled=true;badge&&badge.classList.remove('show');rmv&&rmv.classList.remove('show');return;}
     if(qty>0){btn.textContent='✓ No carrinho';btn.classList.add('added');badge&&badge.classList.add('show');rmv&&rmv.classList.add('show');}
     else{btn.textContent='Adicionar ao carrinho';btn.classList.remove('added');badge&&badge.classList.remove('show');rmv&&rmv.classList.remove('show');}
   });
 }
-function addToCart(idx){cart.push({idx,name:gifts[idx].name,price:gifts[idx].price,img:gifts[idx].img});updateCartUI();toast('Adicionado ao carrinho! 🛒');}
+function addToCart(idx){if(paidGiftIds.has(String(idx))){toast('Este presente já foi pago.');return;}cart.push({idx,name:gifts[idx].name,price:gifts[idx].price,img:gifts[idx].img});updateCartUI();toast('Adicionado ao carrinho! 🛒');}
 function removeFromCartByIdx(idx){for(let i=cart.length-1;i>=0;i--){if(cart[i].idx===idx){cart.splice(i,1);break;}}updateCartUI();toast('Item removido');}
 function removeFromCart(i){cart.splice(i,1);updateCartUI();}
 function renderCartModal(){
@@ -244,15 +245,26 @@ function cfNext(){
   document.getElementById('cfStep2').style.display='block';
 }
 function cfBack(){document.getElementById('cfStep2').style.display='none';document.getElementById('cfStep1').style.display='block';}
-function cfSubmit(){
+async function cfSubmit(){
   const name=document.getElementById('cfName').value.trim();
-  document.getElementById('cfSuccessMsg').textContent=name+', sua presença foi confirmada!';
-  document.getElementById('cfStep2').style.display='none';
-  document.getElementById('cfStep3').style.display='block';
-  toast('Presença confirmada! Até logo ♡');
+  const phone=document.getElementById('cfPhone').value.trim();
+  let guests=[name];
+  for(let i=2;i<=guestCount;i++){const g=document.getElementById('cfGuest'+i);if(g&&g.value.trim())guests.push(g.value.trim());}
+  try{
+    const res=await fetch('/api/rsvp',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name,phone,guests,guestCount})});
+    const data=await res.json();
+    if(!res.ok)throw new Error(data.error||'Não foi possível confirmar presença.');
+    document.getElementById('cfSuccessMsg').textContent=name+', sua presença foi confirmada!';
+    document.getElementById('cfStep2').style.display='none';
+    document.getElementById('cfStep3').style.display='block';
+    toast('Presença confirmada! Até logo ♡');
+  }catch(err){toast(err.message||'Erro ao confirmar presença.');}
 }
 const PH='https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=400&q=80';
-function render(){document.getElementById('giftsGrid').innerHTML=gifts.map((g,i)=>`<div class="gift-card${g.comic?' comic':''}" data-idx="${i}"><div class="in-cart-badge">No carrinho</div><img class="gift-img" src="${g.img||PH}" alt="${g.name}" onerror="this.src=PH"><div class="gift-body">${g.comic?'<span class="comic-tag">&#127881; Especial</span>':''}<div class="gift-name">${g.name}</div><div class="gift-price">${g.price}</div><div class="gift-store">${g.store}</div><div class="gift-btn-row"><button class="gift-btn-add" onclick="addToCart(${i})">Adicionar ao carrinho</button><button class="gift-btn-remove" onclick="removeFromCartByIdx(${i})" title="Remover">&#10005;</button></div></div></div>`).join('');}
+let paidGiftIds=new Set();
+function render(){document.getElementById('giftsGrid').innerHTML=gifts.map((g,i)=>`<div class="gift-card${g.comic?' comic':''}" data-idx="${i}"><div class="in-cart-badge">No carrinho</div><img class="gift-img" src="${g.img||PH}" alt="${g.name}" onerror="this.src=PH"><div class="gift-body">${g.comic?'<span class="comic-tag">&#127881; Especial</span>':''}<div class="gift-name">${g.name}</div><div class="gift-price">${g.price}</div><div class="gift-store">${paidGiftIds.has(String(i))?'Presente já pago':g.store}</div><div class="gift-btn-row"><button class="gift-btn-add" onclick="addToCart(${i})"${paidGiftIds.has(String(i))?' disabled':''}>${paidGiftIds.has(String(i))?'Presente já pago':'Adicionar ao carrinho'}</button><button class="gift-btn-remove" onclick="removeFromCartByIdx(${i})" title="Remover">&#10005;</button></div></div></div>`).join('');updateCartUI();}
+async function loadPaidGifts(){try{const res=await fetch('/api/paid-gifts');const data=await res.json();if(res.ok){paidGiftIds=new Set((data.paidGiftIds||[]).map(String));cart=cart.filter(item=>!paidGiftIds.has(String(item.idx)));render();}}catch(e){}}
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500);}
 render();
+loadPaidGifts();
 </script></body></html>

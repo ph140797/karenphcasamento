@@ -53,7 +53,7 @@ exports.handler = async (event) => {
 
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
-      payment_method_types: ['card'],
+      automatic_payment_methods: { enabled: true },
       line_items: items.map((item) => ({
         quantity: 1,
         price_data: {
@@ -66,6 +66,8 @@ exports.handler = async (event) => {
         }
       })),
       metadata: { order_id: orderId },
+      allow_promotion_codes: false,
+      billing_address_collection: 'auto',
       success_url: `${origin}/success.html?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/#presentes`
     });
