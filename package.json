@@ -4,7 +4,7 @@
   "private": true,
   "description": "Wedding website for Karen and Paulo Henrique with Netlify Functions, Stripe Checkout, and gift admin APIs.",
   "scripts": {
-    "build": "npm run migrate",
+    "build": "npm run check",
     "dev": "netlify dev",
     "migrate": "node scripts/migrate-supabase.js",
     "start": "netlify dev",
