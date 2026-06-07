@@ -12,6 +12,10 @@
     h1{font-family:"Cormorant Garamond",serif;font-size:34px;font-weight:400;margin:0;color:var(--gold)}
     main{max-width:1120px;margin:0 auto;padding:28px clamp(18px,4vw,48px) 56px}
     .login,.summary,.table-wrap{background:#fff;border:1px solid var(--line);border-radius:6px;padding:18px;margin-bottom:18px}
+    .auth-screen{min-height:100vh;display:grid;place-items:center;padding:24px}
+    .auth-card{width:min(520px,100%);background:#fff;border:1px solid var(--line);border-radius:6px;padding:28px}
+    .auth-title{font-family:"Cormorant Garamond",serif;font-size:38px;font-weight:400;margin:0 0 18px;color:var(--gold)}
+    .admin-shell[hidden],.auth-screen[hidden]{display:none}
     label{display:block;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
     input{width:100%;border:1px solid var(--line);padding:12px;font:inherit}
     input[type="checkbox"]{width:auto;transform:scale(1.2)}
@@ -30,12 +34,9 @@
   </style>
 </head>
 <body>
-  <header>
-    <h1>Admin de Presentes</h1>
-    <button id="refreshBtn">Atualizar</button>
-  </header>
-  <main>
-    <section class="login">
+  <section class="auth-screen" id="loginScreen">
+    <div class="auth-card">
+      <h1 class="auth-title">Admin de Presentes</h1>
       <div class="login-row">
         <div>
           <label for="token">Admin token</label>
@@ -44,7 +45,15 @@
         <button id="saveTokenBtn">Entrar</button>
       </div>
       <p id="error" class="error"></p>
-    </section>
+    </div>
+  </section>
+  <div class="admin-shell" id="adminShell" hidden>
+    <header>
+      <h1>Admin de Presentes</h1>
+      <button id="refreshBtn">Atualizar</button>
+    </header>
+    <main>
+    <p id="adminStatus" class="error"></p>
     <section class="summary">
       <div class="metric"><b id="paidTotal">R$ 0,00</b><span>Total pago</span></div>
       <div class="metric"><b id="paidCount">0</b><span>Pagamentos</span></div>
@@ -82,20 +91,43 @@
         <tbody id="rsvps"><tr><td colspan="5" class="muted">Informe o token para carregar.</td></tr></tbody>
       </table>
     </section>
-  </main>
+    </main>
+  </div>
   <script>
     const fmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
     const tokenInput = document.getElementById('token');
     const errorEl = document.getElementById('error');
+    const adminStatusEl = document.getElementById('adminStatus');
+    const loginScreen = document.getElementById('loginScreen');
+    const adminShell = document.getElementById('adminShell');
     let giftCatalog = [];
     tokenInput.value = localStorage.getItem('weddingAdminToken') || '';
 
+    function setMessage(message){
+      errorEl.textContent = message;
+      adminStatusEl.textContent = message;
+    }
     function money(cents){ return fmt.format((Number(cents) || 0) / 100); }
     function centsFromBRL(value){
       const normalized = String(value || '').replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.');
       return Math.round((Number.parseFloat(normalized) || 0) * 100);
     }
     function itemText(items){ return (items || []).map((item) => item.name).join(', '); }
+    function setAuthenticated(){
+      loginScreen.hidden = true;
+      adminShell.hidden = false;
+    }
+    async function validateToken(){
+      const token = tokenInput.value.trim();
+      if(!token){ setMessage('Informe o ADMIN_TOKEN.'); return false; }
+      const res = await fetch('/api/admin-auth', { headers: { Authorization: `Bearer ${token}` } });
+      if(!res.ok){ setMessage('Token inválido.'); return false; }
+      localStorage.setItem('weddingAdminToken', token);
+      setAuthenticated();
+      setMessage('');
+      await loadOrders();
+      return true;
+    }
     function renderGifts(){
       document.getElementById('gifts').innerHTML = giftCatalog.length ? giftCatalog.map((gift, index) => `
         <tr>
@@ -112,13 +144,13 @@
       const name = document.getElementById('giftName').value.trim();
       const price = centsFromBRL(document.getElementById('giftValue').value.trim());
       const special = document.getElementById('giftSpecial').checked;
-      if(!name || !price){ errorEl.textContent = 'Informe nome e valor do presente.'; return; }
+      if(!name || !price){ setMessage('Informe nome e valor do presente.'); return; }
       giftCatalog.push({ id: crypto.randomUUID(), image, name, price, special, store: special ? 'Contribuição especial' : 'Presente de casamento', active: true });
       document.getElementById('giftImage').value = '';
       document.getElementById('giftName').value = '';
       document.getElementById('giftValue').value = '';
       document.getElementById('giftSpecial').checked = false;
-      errorEl.textContent = '';
+      setMessage('');
       renderGifts();
     }
     function removeGift(index){
@@ -127,37 +159,36 @@
     }
     async function saveGifts(){
       const token = tokenInput.value.trim();
-      if(!token){ errorEl.textContent = 'Informe o ADMIN_TOKEN.'; return; }
+      if(!token){ setMessage('Informe o ADMIN_TOKEN.'); return; }
       const res = await fetch('/api/gifts', {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token}`, 'content-type': 'application/json' },
         body: JSON.stringify({ gifts: giftCatalog })
       });
       const data = await res.json();
-      if(!res.ok){ errorEl.textContent = data.error || 'Não foi possível salvar presentes.'; return; }
+      if(!res.ok){ setMessage(data.error || 'Não foi possível salvar presentes.'); return; }
       giftCatalog = data.gifts || [];
       renderGifts();
-      errorEl.textContent = 'Presentes salvos.';
+      setMessage('Presentes salvos.');
     }
     async function markOrderPaid(id){
       const token = tokenInput.value.trim();
-      if(!token){ errorEl.textContent = 'Informe o ADMIN_TOKEN.'; return; }
+      if(!token){ setMessage('Informe o ADMIN_TOKEN.'); return; }
       const res = await fetch('/api/admin-orders', {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}`, 'content-type': 'application/json' },
         body: JSON.stringify({ id, status: 'paid' })
       });
       const data = await res.json();
-      if(!res.ok){ errorEl.textContent = data.error || 'Não foi possível confirmar pagamento.'; return; }
-      errorEl.textContent = 'Pagamento confirmado.';
+      if(!res.ok){ setMessage(data.error || 'Não foi possível confirmar pagamento.'); return; }
+      setMessage('Pagamento confirmado.');
       loadOrders();
     }
 
     async function loadOrders(){
       const token = tokenInput.value.trim();
-      if(!token){ errorEl.textContent = 'Informe o ADMIN_TOKEN.'; return; }
-      localStorage.setItem('weddingAdminToken', token);
-      errorEl.textContent = '';
+      if(!token){ setMessage('Informe o ADMIN_TOKEN.'); return; }
+      setMessage('');
       const [ordersRes, rsvpsRes, giftsRes] = await Promise.all([
         fetch('/api/admin-orders', { headers: { Authorization: `Bearer ${token}` } }),
         fetch('/api/admin-rsvps', { headers: { Authorization: `Bearer ${token}` } }),
@@ -166,8 +197,8 @@
       const ordersData = await ordersRes.json();
       const rsvpsData = await rsvpsRes.json();
       const giftsData = await giftsRes.json();
-      if(!ordersRes.ok){ errorEl.textContent = ordersData.error || 'Não foi possível carregar presentes.'; return; }
-      if(!rsvpsRes.ok){ errorEl.textContent = rsvpsData.error || 'Não foi possível carregar presenças.'; return; }
+      if(!ordersRes.ok){ setMessage(ordersData.error || 'Não foi possível carregar presentes.'); return; }
+      if(!rsvpsRes.ok){ setMessage(rsvpsData.error || 'Não foi possível carregar presenças.'); return; }
       const orders = ordersData.orders || [];
       const rsvps = rsvpsData.rsvps || [];
       giftCatalog = giftsData.gifts || [];
@@ -199,11 +230,11 @@
       `).join('') : '<tr><td colspan="5" class="muted">Nenhuma presença confirmada ainda.</td></tr>';
     }
 
-    document.getElementById('saveTokenBtn').addEventListener('click', loadOrders);
+    document.getElementById('saveTokenBtn').addEventListener('click', validateToken);
+    tokenInput.addEventListener('keydown', (event) => { if(event.key === 'Enter') validateToken(); });
     document.getElementById('refreshBtn').addEventListener('click', loadOrders);
     document.getElementById('addGiftBtn').addEventListener('click', addGift);
     document.getElementById('saveGiftsBtn').addEventListener('click', saveGifts);
-    if(tokenInput.value) loadOrders();
   </script>
 </body>
 </html>

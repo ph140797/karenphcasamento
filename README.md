@@ -38,6 +38,7 @@ supabase/manual-sql/all.sql
 ```
 
 You can also run the numbered files in order from `supabase/manual-sql`.
+Run `supabase/manual-sql/003_seed_gifts.sql` to insert or update the scraped gift catalog.
 
 Locally, if your database URL is reachable:
 
