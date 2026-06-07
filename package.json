@@ -1,0 +1,19 @@
+{
+  "name": "karen-ph-casamento",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Wedding website for Karen and Paulo Henrique with Netlify Functions, Stripe Checkout, and gift admin APIs.",
+  "scripts": {
+    "dev": "netlify dev",
+    "start": "netlify dev",
+    "check": "node --check netlify/functions/create-checkout-session.js && node --check netlify/functions/stripe-webhook.js && node --check netlify/functions/admin-orders.js && node --check netlify/functions/gifts.js"
+  },
+  "dependencies": {
+    "@netlify/blobs": "^8.2.0",
+    "@supabase/supabase-js": "^2.45.4",
+    "stripe": "^16.12.0"
+  },
+  "devDependencies": {
+    "netlify-cli": "^17.36.2"
+  }
+}
