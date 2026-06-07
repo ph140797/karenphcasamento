@@ -7,7 +7,7 @@ Static wedding site prepared for Netlify hosting with:
 - Manual Pix checkout with QR Code registration
 - Admin dashboard at `/admin`
 - Supabase storage for paid gifts, RSVPs, and admin data
-- Deploy migration hook through `npm run build`
+- Manual SQL scripts for Supabase schema setup
 
 ## Netlify Environment Variables
 
@@ -25,24 +25,21 @@ Set these in Netlify site settings:
 - `PIX_KEY`
 - `PIX_QR_CODE_IMAGE_URL`
 
-For deploy-time migrations, also set one of these options:
-
-- `SUPABASE_DB_URL`, recommended
-- or `SUPABASE_ACCESS_TOKEN` plus `SUPABASE_PROJECT_REF`
-
-For Supabase server access, use `SUPABASE_SECRET_KEY` for new Supabase API keys, or `SUPABASE_SERVICE_ROLE_KEY` for legacy keys. The Supabase API keys can read/write through the app, but migrations require database or management API access because PostgREST cannot create tables.
+For Supabase server access, use `SUPABASE_SECRET_KEY` for new Supabase API keys, or `SUPABASE_SERVICE_ROLE_KEY` for legacy keys.
 
 The public site points to `/assets/pix-qr-code.png` for the Pix QR image. Add the real QR image there, or update both `PIX_QR_CODE_IMAGE_URL` and the `PIX_QR_CODE_IMAGE` value in `index.html`.
 
 ## Supabase Migrations
 
-SQL migrations live in `supabase/migrations`. Netlify runs them during deploy through:
+SQL migrations live in `supabase/migrations`. To apply them manually in the Supabase SQL Editor, use:
 
 ```text
-npm run build
+supabase/manual-sql/all.sql
 ```
 
-Locally:
+You can also run the numbered files in order from `supabase/manual-sql`.
+
+Locally, if your database URL is reachable:
 
 ```text
 npm run migrate
