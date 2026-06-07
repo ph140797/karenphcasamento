@@ -139,18 +139,27 @@
         </tr>
       `).join('') : '<tr><td colspan="5" class="muted">Nenhum presente cadastrado.</td></tr>';
     }
-    function addGift(){
+    async function addGift(){
+      const token = tokenInput.value.trim();
+      if(!token){ setMessage('Informe o ADMIN_TOKEN.'); return; }
       const image = document.getElementById('giftImage').value.trim();
       const name = document.getElementById('giftName').value.trim();
       const price = centsFromBRL(document.getElementById('giftValue').value.trim());
       const special = document.getElementById('giftSpecial').checked;
       if(!name || !price){ setMessage('Informe nome e valor do presente.'); return; }
-      giftCatalog.push({ id: crypto.randomUUID(), image, name, price, special, store: special ? 'Contribuição especial' : 'Presente de casamento', active: true });
+      const res = await fetch('/api/gifts', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+        body: JSON.stringify({ image, name, price, special, store: special ? 'Contribuição especial' : 'Presente de casamento', active: true })
+      });
+      const data = await res.json();
+      if(!res.ok){ setMessage(data.error || 'Não foi possível adicionar presente.'); return; }
+      giftCatalog = data.gifts || [];
       document.getElementById('giftImage').value = '';
       document.getElementById('giftName').value = '';
       document.getElementById('giftValue').value = '';
       document.getElementById('giftSpecial').checked = false;
-      setMessage('');
+      setMessage('Presente adicionado.');
       renderGifts();
     }
     function removeGift(index){
