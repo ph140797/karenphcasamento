@@ -110,9 +110,7 @@ async function listOrders() {
 async function updateOrder(id, patch) {
   const current = await getOrder(id);
   if (!current) return null;
-  const updated = await saveOrder({ ...current, ...patch, id });
-  if (updated.status === 'paid') await markGiftsPurchased(updated.items || [], updated.id);
-  return updated;
+  return saveOrder({ ...current, ...patch, id });
 }
 
 async function listGifts() {
@@ -230,19 +228,6 @@ async function listRsvps() {
   const { blobs } = await store.list();
   const rsvps = await Promise.all(blobs.map((blob) => store.get(blob.key, { type: 'json' })));
   return rsvps.filter(Boolean).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
-}
-
-async function markGiftsPurchased(items, orderId) {
-  const ids = (items || []).map((item) => String(item.id)).filter(Boolean);
-  if (!ids.length) return;
-
-  if (hasSupabase) {
-    const { error } = await supabase()
-      .from('wedding_gifts')
-      .update({ purchased: true, purchased_order_id: orderId, updated_at: nowIso() })
-      .in('id', ids);
-    if (error) throw error;
-  }
 }
 
 async function listPaidGiftIds() {
