@@ -1,6 +1,6 @@
 # Karen & Paulo Henrique Wedding Site
 
-Static wedding site prepared for Netlify hosting with:
+Static wedding site prepared for Netlify hosting with: 
 
 - Netlify Functions under `/api/*`
 - Stripe Checkout for credit card gift payments
