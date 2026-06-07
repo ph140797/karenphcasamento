@@ -1,4 +1,4 @@
-# Karen & Paulo Henrique Wedding Site
+# Karen & Paulo Henrique Wedding Site 
 
 Static wedding site prepared for Netlify hosting with: 
 
