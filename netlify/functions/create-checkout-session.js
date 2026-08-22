@@ -1,92 +1,96 @@
 const crypto = require('node:crypto');
-const Stripe = require('stripe');
 const { json } = require('./_http');
 const { saveOrder } = require('./_db');
+const { giftsById } = require('./_gift-catalog');
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'missing-key');
-const currency = (process.env.STRIPE_CURRENCY || 'brl').toLowerCase();
+function apiBase() {
+  return process.env.ASAAS_ENV === 'sandbox'
+    ? 'https://api-sandbox.asaas.com/v3'
+    : 'https://api.asaas.com/v3';
+}
 
-function amountFromBRL(price) {
-  if (typeof price === 'number') return Math.round(price * 100);
-  const normalized = String(price || '')
-    .replace(/[^\d,.-]/g, '')
-    .replace(/\./g, '')
-    .replace(',', '.');
-  return Math.round(Number.parseFloat(normalized) * 100);
+function checkoutBase() {
+  return process.env.ASAAS_ENV === 'sandbox'
+    ? 'https://sandbox.asaas.com'
+    : 'https://asaas.com';
 }
 
 function normalizeItems(items) {
   if (!Array.isArray(items)) return [];
-  return items.slice(0, 50).map((item, index) => {
-    const amount = amountFromBRL(item.price);
-    return {
-      id: String(item.id || item.idx || `gift-${index}`),
-      name: String(item.name || 'Presente de casamento').slice(0, 120),
-      image: String(item.img || item.image || '').slice(0, 2000),
-      amount
-    };
-  }).filter((item) => item.amount >= 100);
+  return items.slice(0, 43).map((item) => giftsById.get(String(item.id || ''))).filter(Boolean);
 }
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return json(405, { error: 'Method not allowed' });
-  if (!process.env.STRIPE_SECRET_KEY) return json(500, { error: 'Missing STRIPE_SECRET_KEY' });
+  if (!process.env.ASAAS_API_KEY) return json(500, { error: 'Missing ASAAS_API_KEY' });
 
   try {
     const payload = JSON.parse(event.body || '{}');
     const items = normalizeItems(payload.items);
-    if (!items.length) return json(400, { error: 'Cart is empty' });
+    if (!items.length) return json(400, { error: 'Carrinho vazio ou presentes inválidos.' });
 
-    const origin = process.env.URL || event.headers.origin || 'http://localhost:8888';
     const orderId = crypto.randomUUID();
     const amountTotal = items.reduce((sum, item) => sum + item.amount, 0);
-
-    await saveOrder({
-      id: orderId,
-      status: 'pending',
-      amount_total: amountTotal,
-      currency,
-      items,
-      gift_message: String(payload.message || '').slice(0, 1000),
-      created_at: new Date().toISOString()
-    });
-
-    const session = await stripe.checkout.sessions.create({
-      mode: 'payment',
-      payment_method_types: ['card'],
-      line_items: items.map((item) => ({
-        quantity: 1,
-        price_data: {
-          currency,
-          unit_amount: item.amount,
-          product_data: {
-            name: item.name,
-            images: item.image && item.image.startsWith('http') ? [item.image] : []
-          }
-        }
-      })),
-      metadata: { order_id: orderId },
-      locale: 'pt-BR',
-      allow_promotion_codes: false,
-      billing_address_collection: 'auto',
-      success_url: `${origin}/success.html?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/#presentes`
-    });
+    const origin = process.env.URL || event.headers.origin || 'http://localhost:8888';
+    const minutesToExpire = Math.min(1440, Math.max(10, Number(process.env.ASAAS_CHECKOUT_EXPIRATION_MINUTES || 30)));
 
     await saveOrder({
       id: orderId,
       status: 'checkout_created',
-      payment_method: 'card',
+      payment_method: 'asaas_checkout',
       amount_total: amountTotal,
-      currency,
+      currency: 'brl',
       items,
       gift_message: String(payload.message || '').slice(0, 1000),
-      stripe_session_id: session.id,
       created_at: new Date().toISOString()
     });
 
-    return json(200, { url: session.url, sessionId: session.id, orderId });
+    const response = await fetch(`${apiBase()}/checkouts`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        access_token: process.env.ASAAS_API_KEY
+      },
+      body: JSON.stringify({
+        billingTypes: ['PIX', 'CREDIT_CARD'],
+        chargeTypes: ['DETACHED'],
+        minutesToExpire,
+        externalReference: orderId,
+        callback: {
+          successUrl: `${origin}/success.html?order_id=${encodeURIComponent(orderId)}`,
+          cancelUrl: `${origin}/#presentes`,
+          expiredUrl: `${origin}/#presentes`
+        },
+        items: items.map((item) => ({
+          name: item.name,
+          quantity: 1,
+          value: item.amount / 100
+        }))
+      })
+    });
+    const checkout = await response.json();
+    if (!response.ok || !checkout.id) {
+      throw new Error(checkout.errors?.[0]?.description || checkout.message || 'Não foi possível criar o checkout Asaas.');
+    }
+
+    await saveOrder({
+      id: orderId,
+      status: 'checkout_created',
+      payment_method: 'asaas_checkout',
+      amount_total: amountTotal,
+      currency: 'brl',
+      items,
+      asaas_checkout_id: checkout.id,
+      gift_message: String(payload.message || '').slice(0, 1000),
+      created_at: new Date().toISOString()
+    });
+
+    return json(200, {
+      orderId,
+      checkoutId: checkout.id,
+      url: checkout.url || `${checkoutBase()}/checkoutSession/show?id=${encodeURIComponent(checkout.id)}`
+    });
   } catch (error) {
-    return json(500, { error: error.message || 'Checkout failed' });
+    return json(500, { error: error.message || 'Não foi possível iniciar o checkout.' });
   }
 };

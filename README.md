@@ -1,75 +1,34 @@
-# Karen & Paulo Henrique Wedding Site 
+# Casamento Karen & Paulo Henrique
 
-Static wedding site prepared for Netlify hosting with: 
+Site estático hospedado na Netlify, com catálogo de presentes no código, confirmações de presença e pagamentos pelo Checkout da Asaas.
 
-- Netlify Functions under `/api/*`
-- Stripe Checkout for credit card gift payments
-- Manual Pix checkout with QR Code registration
-- Admin dashboard at `/admin`
-- Supabase storage for paid gifts, RSVPs, and admin data
-- Manual SQL scripts for Supabase schema setup
+## Variáveis da Netlify
 
-## Netlify Environment Variables
+- ASAAS_API_KEY
+- ASAAS_ENV=production
+- ASAAS_WEBHOOK_TOKEN
+- ASAAS_CHECKOUT_EXPIRATION_MINUTES=30
+- ADMIN_TOKEN
+- URL
 
-Set these in Netlify site settings:
+Os pedidos e confirmações são armazenados em Netlify Blobs. O catálogo de presentes é fixo no código do site.
 
-- `STRIPE_SECRET_KEY`
-- `STRIPE_PUBLISHABLE_KEY`
-- `STRIPE_WEBHOOK_SECRET`
-- `ADMIN_TOKEN`
-- `URL`
-- `SUPABASE_URL`
-- `SUPABASE_SECRET_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `SUPABASE_ANON_KEY`
-- `PIX_KEY`
-- `PIX_QR_CODE_IMAGE_URL`
+## Webhook da Asaas
 
-For Supabase server access, use `SUPABASE_SECRET_KEY` for new Supabase API keys, or `SUPABASE_SERVICE_ROLE_KEY` for legacy keys.
+Configure a URL abaixo na área de integrações da Asaas:
 
-The public site points to `/assets/pix-qr-code.png` for the Pix QR image. Add the real QR image there, or update both `PIX_QR_CODE_IMAGE_URL` and the `PIX_QR_CODE_IMAGE` value in `index.html`.
+    https://karenphcasamento.netlify.app/api/asaas-webhook
 
-## Supabase Migrations
+Use o mesmo valor de ASAAS_WEBHOOK_TOKEN como token de autenticação do webhook e ative os eventos:
 
-SQL migrations live in `supabase/migrations`. To apply them manually in the Supabase SQL Editor, use:
+- PAYMENT_CONFIRMED
+- PAYMENT_RECEIVED
+- PAYMENT_OVERDUE
+- PAYMENT_DELETED
+- PAYMENT_REFUNDED
 
-```text
-supabase/manual-sql/all.sql
-```
-
-You can also run the numbered files in order from `supabase/manual-sql`.
-Run `supabase/manual-sql/003_seed_gifts.sql` to insert or update the scraped gift catalog.
-
-Locally, if your database URL is reachable:
-
-```text
-npm run migrate
-```
-
-## Stripe Webhook
-
-Create a Stripe webhook endpoint pointing to:
-
-```text
-https://your-domain.com/api/stripe-webhook
-```
-
-Listen for:
-
-- `checkout.session.completed`
-- `checkout.session.expired`
-
-Use the signing secret as `STRIPE_WEBHOOK_SECRET`.
+O endpoint confirma a origem pelo cabeçalho asaas-access-token e atualiza o pedido após a notificação da Asaas.
 
 ## Admin
 
-Open:
-
-```text
-/admin
-```
-
-Use `ADMIN_TOKEN` as the password. The dashboard shows paid gifts, pending checkouts, total paid amount, and RSVP guest count.
-It also lets you register gifts with image, name, value, and special flag. Pix orders are saved as `pix_pending`; after checking the bank receipt, use "Marcar pago" in admin so the gifts become unavailable on the public page.
-
-Na seção de presenças, o botão **Exportar CSV** gera uma lista compatível com Excel e Google Sheets. Cada pessoa ocupa uma linha e recebe um código numérico sequencial, com tipo `Convidado` ou `Acompanhante`; acompanhantes incluem o código e o nome do convidado principal relacionado.
+Abra /admin e use ADMIN_TOKEN. O painel mostra pedidos e confirmações de presença, incluindo a exportação CSV.
