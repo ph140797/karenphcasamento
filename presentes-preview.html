@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prévia de presentes — Karen & Paulo Henrique</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root{--ink:#1a1208;--warm:#2a1b0a;--gold:#c9a84c;--cream:#faf7f2;--soft:#f0e8d8;--muted:#8f7b58}
+    *{box-sizing:border-box}body{margin:0;background:var(--cream);color:var(--ink);font-family:Jost,system-ui,sans-serif}.hero{padding:4.5rem 1.5rem 3rem;background:linear-gradient(135deg,#100b05,#31220f);text-align:center;color:#fff;border-bottom:1px solid rgba(201,168,76,.55)}.eyebrow{font-size:.7rem;letter-spacing:.34em;text-transform:uppercase;color:var(--gold);margin-bottom:.85rem}.hero h1{margin:0;font:400 clamp(2.5rem,7vw,5rem)/.9 'Cormorant Garamond',serif;letter-spacing:.04em}.hero p{max-width:680px;margin:1.4rem auto 0;color:#e8d5a3;line-height:1.65;font-size:.92rem}.wrap{max-width:1320px;margin:auto;padding:2rem 1.5rem 5rem}.summary{display:flex;align-items:center;justify-content:space-between;gap:1rem;position:sticky;top:0;z-index:3;margin:-1px 0 2rem;padding:1rem 1.2rem;background:rgba(250,247,242,.94);border:1px solid #e3d6bb;backdrop-filter:blur(10px)}.summary-label{font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}.summary-value{font:500 2rem/1 'Cormorant Garamond',serif}.hint{font-size:.8rem;color:var(--muted);text-align:right}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(245px,1fr));gap:1.25rem}.card{background:#fff;border:1px solid #eadfca;box-shadow:0 12px 28px rgba(49,34,15,.07);overflow:hidden;display:flex;flex-direction:column}.image-wrap{height:200px;background:#eee3d1;overflow:hidden}.image-wrap img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .4s}.card:hover img{transform:scale(1.035)}.card-content{padding:1.1rem;display:flex;flex-direction:column;gap:.85rem;flex:1}.number{font-size:.65rem;letter-spacing:.18em;color:var(--gold);text-transform:uppercase}.name{font:500 1.6rem/1.05 'Cormorant Garamond',serif;min-height:3.35rem}.price-label{font-size:.64rem;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}.price-input{width:100%;border:0;border-bottom:1px solid #d9c7a5;background:transparent;padding:.2rem 0 .45rem;font:500 1.35rem 'Cormorant Garamond',serif;color:var(--ink);outline:none}.price-input:focus{border-color:var(--gold)}.footer-note{margin:3rem auto 0;max-width:780px;padding:1.3rem;border:1px solid #e3d6bb;color:#695634;font-size:.82rem;line-height:1.65;text-align:center}@media(max-width:580px){.hero{padding:3rem 1.1rem 2.25rem}.wrap{padding:1.25rem .9rem 3rem}.summary-value{font-size:1.6rem}.hint{display:none}.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:.7rem}.image-wrap{height:130px}.card-content{padding:.8rem;gap:.6rem}.name{font-size:1.25rem;min-height:3.1rem}.price-input{font-size:1.1rem}}
+    .image-pending{height:100%;display:grid;place-items:center;color:#9b8560;font-size:.65rem;letter-spacing:.2em;text-transform:uppercase;background:repeating-linear-gradient(-45deg,#f6f0e4,#f6f0e4 10px,#eee3d1 10px,#eee3d1 11px)}
+  </style>
+</head>
+<body>
+  <header class="hero"><div class="eyebrow">Lista de casamento · prévia para aprovação</div><h1>Karen &amp; Paulo Henrique</h1><p>Curadoria de presentes premium. Esta página é apenas uma prévia: editar os preços aqui não publica nem cadastra itens no site.</p></header>
+  <main class="wrap"><div class="summary"><div><div class="summary-label">43 presentes · valor estimado</div><div class="summary-value" id="total">R$ 0,00</div></div><div class="hint">Valores editáveis nesta prévia<br>Todos acima de R$ 300,00</div></div><section class="grid" id="gift-grid"></section><p class="footer-note">Imagens ilustrativas de produtos premium, sem preço aplicado nas fotos. Após sua aprovação dos valores e imagens, os itens poderão ser preparados para cadastro no catálogo vivo.</p></main>
+  <script>
+    const imageQueries={
+      'Geladeira':'french-door-refrigerator,stainless-steel','fogão':'gas-stove,stainless-steel','Tv':'smart-television,living-room','Sofá':'modern-sofa,living-room','guarda roupa':'wardrobe,bedroom','Cama':'luxury-bed,bedroom','maquina de lavar':'washing-machine,laundry','Lava louça':'dishwasher,kitchen','Jogo de cama Queen':'queen-bedding,bedroom','Alexa':'smart-speaker,home','Robo de limpeza':'robot-vacuum,home','Mesa de jantar':'dining-table,modern','Aspirador de pó':'vacuum-cleaner,home','Painel sala de TV':'tv-wall-panel,living-room','Jogo de toalha':'luxury-towels,bathroom','Aparelho de Jantar':'dinnerware,table-setting','Microondas':'microwave-oven,kitchen','forno eletrico':'electric-oven,kitchen','Liquidificador':'blender,kitchen','Air frier':'air-fryer,kitchen','Exaustor':'range-hood,kitchen','Jogo de Talheres':'cutlery,table-setting','Jogo de taças':'wine-glasses,table-setting','Aparelho de fundue':'fondue-set,table-setting','Jogo de panela le creuset':'cast-iron-cookware,kitchen','Cafeteira premium':'espresso-machine,coffee','Kit capsulas de café':'coffee-capsules,coffee','Panela eletrica de arroz':'rice-cooker,kitchen','Panela de pressão eletrica':'electric-pressure-cooker,kitchen','Tapete da sala de estar':'living-room-rug,interior','Cooktop':'induction-cooktop,kitchen','Frigobar':'mini-fridge,home','Chaleira eletrica':'electric-kettle,kitchen','Torradeira':'toaster,kitchen','Maquina de pães':'bread-maker,kitchen','lava e seca':'washer-dryer,laundry','Churrasqueira eletrica':'electric-grill,kitchen','Kit churrasco':'barbecue-tools,grill','Cortina':'curtains,interior','Expremedor de suco eletrico':'electric-juicer,kitchen','Kit mesa posta':'table-setting,dinnerware','Filtro de agua':'water-filter,kitchen','ar condicionado':'air-conditioner,home'
+    };
+    const gifts=[
+      ['Geladeira',7000,'appliance'],['fogão',1500,'appliance'],['Tv',3500,'living'],['Sofá',2000,'living'],['guarda roupa',1900,'bedroom'],['Cama',900,'bedroom'],['maquina de lavar',1400,'appliance'],['Lava louça',1900,'appliance'],['Jogo de cama Queen',700,'textile'],['Alexa',480,'decor'],['Robo de limpeza',600,'decor'],['Mesa de jantar',1670,'dining'],['Aspirador de pó',600,'decor'],['Painel sala de TV',550,'living'],['Jogo de toalha',380,'textile'],['Aparelho de Jantar',400,'dining'],['Microondas',350,'appliance'],['forno eletrico',400,'appliance'],['Liquidificador',300,'kitchen'],['Air frier',400,'kitchen'],['Exaustor',400,'appliance'],['Jogo de Talheres',440,'dining'],['Jogo de taças',300,'dining'],['Aparelho de fundue',400,'dining'],['Jogo de panela le creuset',2500,'kitchen'],['Cafeteira premium',1357,'coffee'],['Kit capsulas de café',375,'coffee'],['Panela eletrica de arroz',420,'kitchen'],['Panela de pressão eletrica',400,'kitchen'],['Tapete da sala de estar',300,'living'],['Cooktop',450,'kitchen'],['Frigobar',900,'appliance'],['Chaleira eletrica',350,'kitchen'],['Torradeira',300,'kitchen'],['Maquina de pães',500,'kitchen'],['lava e seca',2800,'appliance'],['Churrasqueira eletrica',300,'kitchen'],['Kit churrasco',400,'kitchen'],['Cortina',450,'textile'],['Expremedor de suco eletrico',2000,'kitchen'],['Kit mesa posta',400,'dining'],['Filtro de agua',450,'kitchen'],['ar condicionado',7199,'appliance']
+    ];
+    const localImageUrls={
+      'Geladeira':'assets/presentes-preview/WhatsApp%20Image%202026-08-22%20at%2018.37.41.jpeg',
+      'fogão':'assets/presentes-preview/WhatsApp%20Image%202026-08-22%20at%2018.37.50.jpeg',
+      'Tv':'assets/presentes-preview/WhatsApp%20Image%202026-08-22%20at%2018.39.03.jpeg',
+      'Sofá':'assets/presentes-preview/WhatsApp%20Image%202026-08-22%20at%2018.39.03%20(1).jpeg',
+      'guarda roupa':'assets/presentes-preview/WhatsApp%20Image%202026-08-22%20at%2018.39.03%20(2).jpeg',
+      'Cama':'assets/presentes-preview/WhatsApp%20Image%202026-08-22%20at%2018.39.03%20(3).jpeg',
+      'maquina de lavar':'assets/presentes-preview/WhatsApp%20Image%202026-08-22%20at%2018.39.03%20(4).jpeg',
+      'Lava louça':'assets/presentes-preview/WhatsApp%20Image%202026-08-22%20at%2018.39.03%20(5).jpeg',
+      'Jogo de cama Queen':'assets/presentes-preview/WhatsApp%20Image%202026-08-22%20at%2018.39.20.jpeg',
+      'Alexa':'assets/presentes-preview/WhatsApp%20Image%202026-08-22%20at%2018.39.30.jpeg',
+      'Robo de limpeza':'assets/presentes-preview/WhatsApp%20Image%202026-08-22%20at%2018.39.43.jpeg',
+      'Mesa de jantar':'assets/presentes-preview/WhatsApp%20Image%202026-08-22%20at%2018.39.57.jpeg',
+      'Aspirador de pó':'assets/presentes-preview/WhatsApp%20Image%202026-08-22%20at%2018.40.08.jpeg',
+      'Painel sala de TV':'assets/presentes-preview/WhatsApp%20Image%202026-08-22%20at%2018.40.27.jpeg',
+      'Jogo de toalha':'assets/presentes-preview/WhatsApp%20Image%202026-08-22%20at%2018.40.40.jpeg',
+      'Aparelho de Jantar':'assets/presentes-preview/WhatsApp%20Image%202026-08-22%20at%2018.40.53.jpeg',
+      'Microondas':'assets/presentes-preview/WhatsApp%20Image%202026-08-22%20at%2018.41.06.jpeg',
+      'forno eletrico':'assets/presentes-preview/WhatsApp%20Image%202026-08-22%20at%2018.41.44.jpeg',
+      'Liquidificador':'assets/presentes-preview/WhatsApp%20Image%202026-08-22%20at%2018.41.57.jpeg',
+  'Air frier':'assets/presentes-preview/WhatsApp%20Image%202026-08-22%20at%2018.42.10.jpeg',
+  'Exaustor':'assets/presentes-preview/WhatsApp%20Image%202026-08-22%20at%2018.42.59.jpeg',
+  'Jogo de Talheres':'assets/presentes-preview/WhatsApp%20Image%202026-08-22%20at%2018.43.12.jpeg',
+  'Jogo de taças':'assets/presentes-preview/WhatsApp%20Image%202026-08-22%20at%2018.43.26.jpeg',
+  'Aparelho de fundue':'assets/presentes-preview/WhatsApp%20Image%202026-08-22%20at%2018.43.39.jpeg',
+  'Jogo de panela le creuset':'assets/presentes-preview/WhatsApp%20Image%202026-08-22%20at%2018.43.56.jpeg',
+  'Cafeteira premium':'assets/presentes-preview/WhatsApp%20Image%202026-08-22%20at%2018.44.09.jpeg',
+  'Kit capsulas de café':'assets/presentes-preview/WhatsApp%20Image%202026-08-22%20at%2018.44.29.jpeg',
+  'Panela eletrica de arroz':'assets/presentes-preview/WhatsApp%20Image%202026-08-22%20at%2018.44.50.jpeg',
+  'Panela de pressão eletrica':'assets/presentes-preview/WhatsApp%20Image%202026-08-22%20at%2018.45.11.jpeg',
+  'Tapete da sala de estar':'assets/presentes-preview/WhatsApp%20Image%202026-08-22%20at%2018.45.26.jpeg',
+  'Cooktop':'assets/presentes-preview/WhatsApp%20Image%202026-08-22%20at%2018.45.41.jpeg',
+  'Frigobar':'assets/presentes-preview/WhatsApp%20Image%202026-08-22%20at%2018.46.03.jpeg',
+  'Chaleira eletrica':'assets/presentes-preview/WhatsApp%20Image%202026-08-22%20at%2018.46.15.jpeg',
+  'Torradeira':'assets/presentes-preview/WhatsApp%20Image%202026-08-22%20at%2018.46.26.jpeg',
+  'Maquina de pães':'assets/presentes-preview/WhatsApp%20Image%202026-08-22%20at%2018.46.37.jpeg',
+  'lava e seca':'assets/presentes-preview/WhatsApp%20Image%202026-08-22%20at%2018.46.45.jpeg',
+  'Churrasqueira eletrica':'assets/presentes-preview/WhatsApp%20Image%202026-08-22%20at%2018.47.16.jpeg',
+  'Kit churrasco':'assets/presentes-preview/WhatsApp%20Image%202026-08-22%20at%2018.47.26.jpeg',
+  'Cortina':'assets/presentes-preview/WhatsApp%20Image%202026-08-22%20at%2018.47.35.jpeg',
+  'Expremedor de suco eletrico':'assets/presentes-preview/WhatsApp%20Image%202026-08-22%20at%2018.47.51.jpeg',
+  'Kit mesa posta':'assets/presentes-preview/WhatsApp%20Image%202026-08-22%20at%2018.48.02.jpeg',
+  'Filtro de agua':'assets/presentes-preview/WhatsApp%20Image%202026-08-22%20at%2018.48.13.jpeg',
+  'ar condicionado':'assets/presentes-preview/WhatsApp%20Image%202026-08-22%20at%2018.48.25.jpeg'
+};
+    const currency=new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'});
+    const grid=document.querySelector('#gift-grid');
+    grid.innerHTML=gifts.map(([name,price],index)=>`<article class="card"><div class="image-wrap">${localImageUrls[name]?`<img src="${localImageUrls[name]}" alt="${name}" loading="lazy">`:'<div class="image-pending">Imagem pendente</div>'}</div><div class="card-content"><div class="number">Presente ${String(index+1).padStart(2,'0')}</div><div class="name">${name}</div><div><div class="price-label">Valor sugerido</div><input class="price-input" type="text" inputmode="decimal" value="${currency.format(price)}" aria-label="Valor sugerido para ${name}"></div></div></article>`).join('');
+    function numberFromCurrency(value){return Number(String(value).replace(/[^0-9,]/g,'').replace(',','.'))||0}
+    function refreshTotal(){const total=[...document.querySelectorAll('.price-input')].reduce((sum,input)=>sum+numberFromCurrency(input.value),0);document.querySelector('#total').textContent=currency.format(total)}
+    document.querySelectorAll('.price-input').forEach(input=>{input.addEventListener('focus',()=>input.value=currency.format(numberFromCurrency(input.value)));input.addEventListener('blur',()=>{const value=Math.max(300,numberFromCurrency(input.value));input.value=currency.format(value);refreshTotal()})});
+    refreshTotal();
+  </script>
+</body>
+</html>
