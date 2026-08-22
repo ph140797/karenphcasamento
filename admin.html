@@ -61,23 +61,6 @@
       <div class="metric"><b id="guestCount">0</b><span>Convidados</span></div>
     </section>
     <section class="table-wrap">
-      <div class="section-head">
-        <h2>Cadastro de presentes</h2>
-        <button id="saveGiftsBtn">Salvar presentes</button>
-      </div>
-      <div class="gift-form">
-        <div><label for="giftImage">Imagem</label><input id="giftImage" placeholder="https://..."></div>
-        <div><label for="giftName">Nome</label><input id="giftName" placeholder="Nome do presente"></div>
-        <div><label for="giftValue">Valor</label><input id="giftValue" placeholder="450,00"></div>
-        <div><label for="giftSpecial">Especial</label><input id="giftSpecial" type="checkbox"></div>
-        <button id="addGiftBtn" class="ghost">Adicionar</button>
-      </div>
-      <table>
-        <thead><tr><th>Imagem</th><th>Nome</th><th>Valor</th><th>Especial</th><th>Ações</th></tr></thead>
-        <tbody id="gifts"><tr><td colspan="5" class="muted">Informe o token para carregar.</td></tr></tbody>
-      </table>
-    </section>
-    <section class="table-wrap">
       <h2>Presentes</h2>
       <table>
         <thead><tr><th>Data</th><th>Status</th><th>Método</th><th>Cliente</th><th>Valor</th><th>Presentes</th><th>Ações</th></tr></thead>
@@ -103,7 +86,6 @@
     const adminStatusEl = document.getElementById('adminStatus');
     const loginScreen = document.getElementById('loginScreen');
     const adminShell = document.getElementById('adminShell');
-    let giftCatalog = [];
     let rsvpList = [];
     tokenInput.value = localStorage.getItem('weddingAdminToken') || '';
 
@@ -112,10 +94,6 @@
       adminStatusEl.textContent = message;
     }
     function money(cents){ return fmt.format((Number(cents) || 0) / 100); }
-    function centsFromBRL(value){
-      const normalized = String(value || '').replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.');
-      return Math.round((Number.parseFloat(normalized) || 0) * 100);
-    }
     function itemText(items){ return (items || []).map((item) => item.name).join(', '); }
     function setAuthenticated(){
       loginScreen.hidden = true;
@@ -131,58 +109,6 @@
       setMessage('');
       await loadOrders();
       return true;
-    }
-    function renderGifts(){
-      document.getElementById('gifts').innerHTML = giftCatalog.length ? giftCatalog.map((gift, index) => `
-        <tr>
-          <td><img class="gift-thumb" src="${gift.image || gift.img || ''}" alt="" onerror="this.style.display='none'"></td>
-          <td>${gift.name || ''}</td>
-          <td>${money(gift.price)}</td>
-          <td>${gift.special ? 'Sim' : 'Não'}</td>
-          <td><button class="ghost" onclick="removeGift(${index})">Remover</button></td>
-        </tr>
-      `).join('') : '<tr><td colspan="5" class="muted">Nenhum presente cadastrado.</td></tr>';
-    }
-    async function addGift(){
-      const token = tokenInput.value.trim();
-      if(!token){ setMessage('Informe o ADMIN_TOKEN.'); return; }
-      const image = document.getElementById('giftImage').value.trim();
-      const name = document.getElementById('giftName').value.trim();
-      const price = centsFromBRL(document.getElementById('giftValue').value.trim());
-      const special = document.getElementById('giftSpecial').checked;
-      if(!name || !price){ setMessage('Informe nome e valor do presente.'); return; }
-      const res = await fetch('/api/gifts', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-        body: JSON.stringify({ image, name, price, special, store: special ? 'Contribuição especial' : 'Presente de casamento', active: true })
-      });
-      const data = await res.json();
-      if(!res.ok){ setMessage(data.error || 'Não foi possível adicionar presente.'); return; }
-      giftCatalog = data.gifts || [];
-      document.getElementById('giftImage').value = '';
-      document.getElementById('giftName').value = '';
-      document.getElementById('giftValue').value = '';
-      document.getElementById('giftSpecial').checked = false;
-      setMessage('Presente adicionado.');
-      renderGifts();
-    }
-    function removeGift(index){
-      giftCatalog.splice(index, 1);
-      renderGifts();
-    }
-    async function saveGifts(){
-      const token = tokenInput.value.trim();
-      if(!token){ setMessage('Informe o ADMIN_TOKEN.'); return; }
-      const res = await fetch('/api/gifts', {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-        body: JSON.stringify({ gifts: giftCatalog })
-      });
-      const data = await res.json();
-      if(!res.ok){ setMessage(data.error || 'Não foi possível salvar presentes.'); return; }
-      giftCatalog = data.gifts || [];
-      renderGifts();
-      setMessage('Presentes salvos.');
     }
     async function markOrderPaid(id){
       const token = tokenInput.value.trim();
@@ -202,21 +128,17 @@
       const token = tokenInput.value.trim();
       if(!token){ setMessage('Informe o ADMIN_TOKEN.'); return; }
       setMessage('');
-      const [ordersRes, rsvpsRes, giftsRes] = await Promise.all([
+      const [ordersRes, rsvpsRes] = await Promise.all([
         fetch('/api/admin-orders', { headers: { Authorization: `Bearer ${token}` } }),
-        fetch('/api/admin-rsvps', { headers: { Authorization: `Bearer ${token}` } }),
-        fetch('/api/gifts')
+        fetch('/api/admin-rsvps', { headers: { Authorization: `Bearer ${token}` } })
       ]);
       const ordersData = await ordersRes.json();
       const rsvpsData = await rsvpsRes.json();
-      const giftsData = await giftsRes.json();
       if(!ordersRes.ok){ setMessage(ordersData.error || 'Não foi possível carregar presentes.'); return; }
       if(!rsvpsRes.ok){ setMessage(rsvpsData.error || 'Não foi possível carregar presenças.'); return; }
       const orders = ordersData.orders || [];
       const rsvps = rsvpsData.rsvps || [];
       rsvpList = rsvps;
-      giftCatalog = giftsData.gifts || [];
-      renderGifts();
       const paid = orders.filter((order) => order.status === 'paid');
       document.getElementById('paidTotal').textContent = money(paid.reduce((sum, order) => sum + Number(order.amount_total || 0), 0));
       document.getElementById('paidCount').textContent = paid.length;
@@ -279,8 +201,6 @@
     document.getElementById('saveTokenBtn').addEventListener('click', validateToken);
     tokenInput.addEventListener('keydown', (event) => { if(event.key === 'Enter') validateToken(); });
     document.getElementById('refreshBtn').addEventListener('click', loadOrders);
-    document.getElementById('addGiftBtn').addEventListener('click', addGift);
-    document.getElementById('saveGiftsBtn').addEventListener('click', saveGifts);
     document.getElementById('exportRsvpsBtn').addEventListener('click', exportRsvpsCsv);
   </script>
 </body>

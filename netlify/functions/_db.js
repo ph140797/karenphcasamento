@@ -5,7 +5,9 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 
 const supabaseServerKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
-const hasSupabase = Boolean(process.env.SUPABASE_URL && supabaseServerKey);
+// Orders and RSVPs are persisted in Netlify Blobs. The gift catalogue lives in
+// index.html, so the site no longer depends on a Supabase project.
+const hasSupabase = false;
 const useLocalFiles = !hasSupabase && process.env.NETLIFY_DEV === 'true';
 const localRoot = path.join(process.cwd(), '.netlify', 'local-db');
 
