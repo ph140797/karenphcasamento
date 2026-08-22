@@ -27,10 +27,7 @@ body.rsvp-modal-visible{overflow:hidden}
 .cf-input.cf-invalid{border-color:#a33!important;background:#fffafa}
 .cf-field-error{display:block;margin-top:.45rem;color:#923a32;font-size:12px;line-height:1.45;letter-spacing:.02em}
 .video-thumb iframe{display:block;width:100%;height:100%;border:0;background:#000}
-/* Continuous single-page layout */
-section{display:block}
-#confirmar{display:none}
-.nh-band{display:block}
+.nav-links a.nav-active{color:var(--dark)!important;background:var(--gold);border-color:var(--gold)!important;padding:7px 12px}
 
 /* Nossa Historia band — always visible when hero active */
 #hero.active ~ .nh-band{display:block}
@@ -134,8 +131,13 @@ function openRsvpModal(){
   setTimeout(()=>document.getElementById('cfName').focus(),50);
 }
 function closeRsvpModal(){document.getElementById('confirmar').classList.remove('rsvp-modal-open','active');document.body.classList.remove('rsvp-modal-visible');}
-function showSection(id){if(id==='confirmar'){openRsvpModal();return;}const sec=document.getElementById(id);if(!sec)return;if(id==='hero'){window.scrollTo({top:0,behavior:'smooth'});return;}const top=sec.getBoundingClientRect().top+window.scrollY-104;window.scrollTo({top:Math.max(0,top),behavior:'smooth'});}
+function showSection(id){if(id==='confirmar'){openRsvpModal();return;}document.querySelectorAll('section').forEach(s=>s.classList.remove('active'));const sec=document.getElementById(id);sec.classList.add('active');if(id==='hero'){window.scrollTo({top:0,behavior:'smooth'});return;}requestAnimationFrame(()=>{const top=sec.getBoundingClientRect().top+window.scrollY-104;window.scrollTo({top:Math.max(0,top),behavior:'smooth'});});}
 document.addEventListener('keydown',event=>{if(event.key==='Escape')closeRsvpModal();});
+document.querySelectorAll('.nav-links a').forEach(link=>link.addEventListener('click',()=>{
+  document.querySelectorAll('.nav-links a').forEach(item=>item.classList.remove('nav-active'));
+  link.classList.add('nav-active');
+}));
+document.querySelector('.nav-mono').addEventListener('click',()=>document.querySelectorAll('.nav-links a').forEach(item=>item.classList.remove('nav-active')));
 function formatBrazilianPhone(value){
   const digits=value.replace(/\D/g,'').slice(0,11);
   if(digits.length<=2)return digits.length?`(${digits}`:'';
