@@ -66,13 +66,16 @@ body.gallery-lightbox-open{overflow:hidden}
 .sitio-wrap{max-height:none;overflow:visible}
 .sitio-wrap img{height:auto;max-height:none;object-fit:contain;object-position:center}
 /* Larger countdown */
-.countdown-bar{height:60px}
-.cd-num{font-size:26px;font-weight:400}
-.cd-lbl{font-size:9px;margin-top:3px}
-.cd-title{font-size:10px}
-nav{top:60px}
-#hero,#info,#galeria,#presentes,#confirmar{padding-top:120px}
-@media(max-width:600px){.cd-item{padding:0 .65rem}.cd-title{margin-right:.7rem}.cd-num{font-size:22px}.cd-sep{padding:0}}
+.countdown-bar{height:102px}
+.cd-item{padding:0 2.55rem}
+.cd-num{font-size:44px;font-weight:400}
+.cd-lbl{font-size:15px;margin-top:5px}
+.cd-title{font-size:17px;margin-right:3.4rem}
+.cd-sep{font-size:24px}
+nav{top:102px}
+#hero,#info,#galeria,#presentes,#confirmar{padding-top:162px}
+@media(max-width:600px){.cd-item{padding:0 .75rem}.cd-title{font-size:14px;margin-right:.75rem}.cd-num{font-size:37px}.cd-lbl{font-size:11px}.cd-sep{padding:0;font-size:18px}}
+@media(max-width:420px){.cd-title{display:none}.cd-item{padding:0 .55rem}.cd-num{font-size:34px}}
 
 /* Nossa Historia band — always visible when hero active */
 #hero.active ~ .nh-band{display:block}
@@ -222,7 +225,7 @@ function openRsvpModal(){
   setTimeout(()=>document.getElementById('cfName').focus(),50);
 }
 function closeRsvpModal(){document.getElementById('confirmar').classList.remove('rsvp-modal-open','active');document.body.classList.remove('rsvp-modal-visible');}
-function showSection(id){if(id==='confirmar'){openRsvpModal();return;}document.querySelectorAll('section').forEach(s=>s.classList.remove('active'));const sec=document.getElementById(id);sec.classList.add('active');if(id==='hero'){window.scrollTo({top:0,behavior:'smooth'});return;}requestAnimationFrame(()=>{const top=sec.getBoundingClientRect().top+window.scrollY-120;window.scrollTo({top:Math.max(0,top),behavior:'smooth'});});}
+function showSection(id){if(id==='confirmar'){openRsvpModal();return;}document.querySelectorAll('section').forEach(s=>s.classList.remove('active'));const sec=document.getElementById(id);sec.classList.add('active');if(id==='hero'){window.scrollTo({top:0,behavior:'smooth'});return;}requestAnimationFrame(()=>{const top=sec.getBoundingClientRect().top+window.scrollY-162;window.scrollTo({top:Math.max(0,top),behavior:'smooth'});});}
 document.addEventListener('keydown',event=>{if(event.key==='Escape')closeRsvpModal();});
 document.querySelectorAll('.nav-links a').forEach(link=>link.addEventListener('click',()=>{
   document.querySelectorAll('.nav-links a').forEach(item=>item.classList.remove('nav-active'));
