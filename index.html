@@ -48,6 +48,11 @@ body.rsvp-modal-visible{overflow:hidden}
 .momentos-grid .g-item:nth-child(6){grid-area:1/4/3/5}
 .momentos-grid .g-item:nth-child(7){grid-area:4/3/5/5}
 @media(max-width:600px){.gallery-grid{gap:4px;padding:4px}}
+.gallery-lightbox{display:none;position:fixed;inset:0;z-index:1000;background:rgba(5,3,1,.94);padding:clamp(1rem,4vw,3rem);align-items:center;justify-content:center;cursor:zoom-out}
+.gallery-lightbox.open{display:flex}
+.gallery-lightbox img{display:block;max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;filter:drop-shadow(0 20px 60px rgba(0,0,0,.55))}
+.gallery-lightbox-close{position:fixed;top:1rem;right:1rem;width:44px;height:44px;border:1px solid rgba(201,168,76,.65);background:rgba(26,18,8,.9);color:var(--gold);font-size:24px;cursor:pointer;z-index:1001}
+body.gallery-lightbox-open{overflow:hidden}
 /* Dark gift section */
 #presentes{background:linear-gradient(180deg,var(--dark) 0%,#24190c 100%)}
 #presentes .sec-title{color:var(--white)!important}
@@ -186,6 +191,25 @@ function addWhatsappGalleryImages(){
   momentsGallery.insertAdjacentHTML('beforeend',images.map(([src,ratio])=>`<div class="g-item" style="aspect-ratio:${ratio}"><img src="${src}" alt="Karen e Paulo Henrique"><div class="g-overlay"><div class="g-label">Nossos momentos</div></div></div>`).join(''));
 }
 addWhatsappGalleryImages();
+function setupGalleryLightbox(){
+  document.body.insertAdjacentHTML('beforeend','<div class="gallery-lightbox" id="galleryLightbox" role="dialog" aria-modal="true" aria-label="Imagem ampliada"><button class="gallery-lightbox-close" type="button" aria-label="Fechar imagem">&#10005;</button><img src="" alt=""></div>');
+  const lightbox=document.getElementById('galleryLightbox');
+  const expandedImage=lightbox.querySelector('img');
+  const closeButton=lightbox.querySelector('button');
+  const close=()=>{lightbox.classList.remove('open');document.body.classList.remove('gallery-lightbox-open');expandedImage.removeAttribute('src');};
+  document.querySelectorAll('#galeria .g-item').forEach(item=>{
+    item.setAttribute('role','button');
+    item.setAttribute('tabindex','0');
+    item.setAttribute('aria-label','Ampliar imagem');
+    const open=()=>{const image=item.querySelector('img');expandedImage.src=image.src;expandedImage.alt=image.alt||'Foto ampliada';lightbox.classList.add('open');document.body.classList.add('gallery-lightbox-open');closeButton.focus();};
+    item.addEventListener('click',open);
+    item.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' ')open();});
+  });
+  closeButton.addEventListener('click',close);
+  lightbox.addEventListener('click',event=>{if(event.target===lightbox)close();});
+  document.addEventListener('keydown',event=>{if(event.key==='Escape'&&lightbox.classList.contains('open'))close();});
+}
+setupGalleryLightbox();
 function unmuteOnInteraction(){if(unmuted||!ytPlayer)return;unmuted=true;ytPlayer.unMute();ytPlayer.setVolume(25);document.removeEventListener('click',unmuteOnInteraction);document.removeEventListener('touchstart',unmuteOnInteraction);}
 document.addEventListener('click',unmuteOnInteraction);document.addEventListener('touchstart',unmuteOnInteraction);
 function toggleMusic(){if(!ytPlayer)return;const icon=document.getElementById('musicIcon'),lbl=document.getElementById('musicLbl');if(musicPlaying){ytPlayer.pauseVideo();musicPlaying=false;icon.classList.remove('spin');lbl.textContent='Música';}else{ytPlayer.unMute();ytPlayer.setVolume(25);ytPlayer.playVideo();musicPlaying=true;icon.classList.add('spin');lbl.textContent='Pausar';}}
