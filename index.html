@@ -154,6 +154,21 @@ function setupEmbeddedVideos(){
   });
 }
 setupEmbeddedVideos();
+function addWhatsappGalleryImages(){
+  const galleries=document.querySelectorAll('#galeria .gallery-grid');
+  const momentsGallery=galleries[galleries.length-1];
+  if(!momentsGallery)return;
+  const images=[
+    ['assets/galeria-whatsapp-01.jpeg','2/3'],
+    ['assets/galeria-whatsapp-02.jpeg','3/2'],
+    ['assets/galeria-whatsapp-03.jpeg','3/2'],
+    ['assets/galeria-whatsapp-04.jpeg','2/3'],
+    ['assets/galeria-whatsapp-05.jpeg','2/3'],
+    ['assets/galeria-whatsapp-06.jpeg','3/2']
+  ];
+  momentsGallery.insertAdjacentHTML('beforeend',images.map(([src,ratio])=>`<div class="g-item" style="aspect-ratio:${ratio}"><img src="${src}" alt="Karen e Paulo Henrique"><div class="g-overlay"><div class="g-label">Nossos momentos</div></div></div>`).join(''));
+}
+addWhatsappGalleryImages();
 function unmuteOnInteraction(){if(unmuted||!ytPlayer)return;unmuted=true;ytPlayer.unMute();ytPlayer.setVolume(25);document.removeEventListener('click',unmuteOnInteraction);document.removeEventListener('touchstart',unmuteOnInteraction);}
 document.addEventListener('click',unmuteOnInteraction);document.addEventListener('touchstart',unmuteOnInteraction);
 function toggleMusic(){if(!ytPlayer)return;const icon=document.getElementById('musicIcon'),lbl=document.getElementById('musicLbl');if(musicPlaying){ytPlayer.pauseVideo();musicPlaying=false;icon.classList.remove('spin');lbl.textContent='Música';}else{ytPlayer.unMute();ytPlayer.setVolume(25);ytPlayer.playVideo();musicPlaying=true;icon.classList.add('spin');lbl.textContent='Pausar';}}
