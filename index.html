@@ -28,11 +28,25 @@ body.rsvp-modal-visible{overflow:hidden}
 .cf-field-error{display:block;margin-top:.45rem;color:#923a32;font-size:12px;line-height:1.45;letter-spacing:.02em}
 .video-thumb iframe{display:block;width:100%;height:100%;border:0;background:#000}
 .nav-links a.nav-active{color:var(--dark)!important;background:var(--gold);border-color:var(--gold)!important;padding:7px 12px}
-/* Compact masonry gallery */
-.gallery-grid{display:block;columns:3;column-gap:0}
-.gallery-grid .g-item,.gallery-grid .g-item.span2{display:flex;width:100%;margin:0;break-inside:avoid;grid-column:auto}
-@media(max-width:768px){.gallery-grid{columns:2}}
-@media(max-width:480px){.gallery-grid{columns:1}}
+/* Square gallery mosaics: fixed slots, full uncropped images */
+.gallery-grid{display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(4,1fr);gap:0;aspect-ratio:1;background:#100b05;overflow:hidden}
+.gallery-grid .g-item,.gallery-grid .g-item.span2{display:flex;width:100%;height:100%;min-width:0;min-height:0;aspect-ratio:auto!important;background:#100b05;grid-column:auto}
+.gallery-grid .g-item img{width:100%;height:100%;object-fit:contain;object-position:center;background:#100b05}
+.gallery-grid .g-item:hover img{transform:none}
+.pedido-grid .g-item:nth-child(1){grid-area:1/1/2/3}
+.pedido-grid .g-item:nth-child(2){grid-area:2/1/4/2}
+.pedido-grid .g-item:nth-child(3){grid-area:1/3/2/5}
+.pedido-grid .g-item:nth-child(4){grid-area:2/3/3/5}
+.pedido-grid .g-item:nth-child(5){grid-area:2/2/4/3}
+.pedido-grid .g-item:nth-child(6){grid-area:3/3/4/5}
+.pedido-grid .g-item:nth-child(7){grid-area:4/1/5/5}
+.momentos-grid .g-item:nth-child(1){grid-area:3/1/4/3}
+.momentos-grid .g-item:nth-child(2){grid-area:1/1/3/3}
+.momentos-grid .g-item:nth-child(3){grid-area:3/3/4/5}
+.momentos-grid .g-item:nth-child(4){grid-area:4/1/5/3}
+.momentos-grid .g-item:nth-child(5){grid-area:1/3/3/4}
+.momentos-grid .g-item:nth-child(6){grid-area:1/4/3/5}
+.momentos-grid .g-item:nth-child(7){grid-area:4/3/5/5}
 /* Dark gift section */
 #presentes{background:linear-gradient(180deg,var(--dark) 0%,#24190c 100%)}
 #presentes .sec-title{color:var(--white)!important}
@@ -156,8 +170,10 @@ function setupEmbeddedVideos(){
 setupEmbeddedVideos();
 function addWhatsappGalleryImages(){
   const galleries=document.querySelectorAll('#galeria .gallery-grid');
+  if(galleries[0])galleries[0].classList.add('pedido-grid');
   const momentsGallery=galleries[galleries.length-1];
   if(!momentsGallery)return;
+  momentsGallery.classList.add('momentos-grid');
   const images=[
     ['assets/galeria-whatsapp-01.jpeg','2/3'],
     ['assets/galeria-whatsapp-02.jpeg','3/2'],
