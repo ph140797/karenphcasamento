@@ -28,6 +28,11 @@ body.rsvp-modal-visible{overflow:hidden}
 .cf-field-error{display:block;margin-top:.45rem;color:#923a32;font-size:12px;line-height:1.45;letter-spacing:.02em}
 .video-thumb iframe{display:block;width:100%;height:100%;border:0;background:#000}
 .nav-links a.nav-active{color:var(--dark)!important;background:var(--gold);border-color:var(--gold)!important;padding:7px 12px}
+/* Compact masonry gallery */
+.gallery-grid{display:block;columns:3;column-gap:0}
+.gallery-grid .g-item,.gallery-grid .g-item.span2{display:flex;width:100%;margin:0;break-inside:avoid;grid-column:auto}
+@media(max-width:768px){.gallery-grid{columns:2}}
+@media(max-width:480px){.gallery-grid{columns:1}}
 
 /* Nossa Historia band — always visible when hero active */
 #hero.active ~ .nh-band{display:block}
