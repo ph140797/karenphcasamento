@@ -254,13 +254,14 @@
       if(!rsvpList.length){ setMessage('Não há confirmações para exportar.'); return; }
       const headers = ['Código da pessoa','Nome','Tipo','Código do convidado principal','Convidado principal','WhatsApp do convidado','Data da confirmação','Total no grupo','Mensagem'];
       const rows = [headers];
+      let nextPersonCode = 1;
       rsvpList.forEach((rsvp) => {
-        const guestCode = rsvp.id || `convidado-${rows.length}`;
+        const guestCode = nextPersonCode++;
         const date = new Date(rsvp.created_at || rsvp.updated_at).toLocaleString('pt-BR');
         const guests = Array.isArray(rsvp.guests) && rsvp.guests.length ? rsvp.guests : [rsvp.name];
         rows.push([guestCode, rsvp.name, 'Convidado', '', rsvp.name, rsvp.phone || '', date, rsvp.guest_count || guests.length, rsvp.message || '']);
-        guests.slice(1).forEach((companion, index) => {
-          rows.push([`${guestCode}-A${String(index + 1).padStart(2, '0')}`, companion, 'Acompanhante', guestCode, rsvp.name, rsvp.phone || '', date, rsvp.guest_count || guests.length, rsvp.message || '']);
+        guests.slice(1).forEach((companion) => {
+          rows.push([nextPersonCode++, companion, 'Acompanhante', guestCode, rsvp.name, rsvp.phone || '', date, rsvp.guest_count || guests.length, rsvp.message || '']);
         });
       });
       const csv = '\uFEFF' + rows.map(row => row.map(csvCell).join(';')).join('\r\n');

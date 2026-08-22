@@ -72,4 +72,4 @@ Open:
 Use `ADMIN_TOKEN` as the password. The dashboard shows paid gifts, pending checkouts, total paid amount, and RSVP guest count.
 It also lets you register gifts with image, name, value, and special flag. Pix orders are saved as `pix_pending`; after checking the bank receipt, use "Marcar pago" in admin so the gifts become unavailable on the public page.
 
-Na seção de presenças, o botão **Exportar CSV** gera uma lista compatível com Excel e Google Sheets. Cada pessoa ocupa uma linha, com tipo `Convidado` ou `Acompanhante`; acompanhantes incluem o código e o nome do convidado principal relacionado.
+Na seção de presenças, o botão **Exportar CSV** gera uma lista compatível com Excel e Google Sheets. Cada pessoa ocupa uma linha e recebe um código numérico sequencial, com tipo `Convidado` ou `Acompanhante`; acompanhantes incluem o código e o nome do convidado principal relacionado.
