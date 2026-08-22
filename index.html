@@ -72,6 +72,17 @@ body.gallery-lightbox-open{overflow:hidden}
 .cd-lbl{font-size:11px;margin-top:4px}
 .cd-title{font-size:12px;margin-right:2.4rem}
 .cd-sep{font-size:17px}
+.countdown-bar{isolation:isolate;overflow:hidden;box-shadow:0 4px 28px rgba(201,168,76,.2),inset 0 -1px rgba(245,230,184,.18);animation:countdownOutdoorPulse 2.4s ease-in-out infinite}
+.countdown-bar::before{content:'';position:absolute;z-index:-1;inset:0;background:linear-gradient(105deg,transparent 25%,rgba(201,168,76,.04) 42%,rgba(245,230,184,.18) 50%,rgba(201,168,76,.04) 58%,transparent 75%);transform:translateX(-120%);animation:countdownLightSweep 4.8s ease-in-out infinite}
+.countdown-bar::after{content:'';position:absolute;z-index:-1;inset:1px;background:radial-gradient(ellipse at center,rgba(201,168,76,.09),transparent 68%);pointer-events:none}
+.cd-title{color:var(--gold-shine);font-weight:600;text-shadow:0 0 9px rgba(201,168,76,.65);animation:countdownTitleGlow 1.2s ease-in-out infinite alternate}
+.cd-num{color:#fffaf0;text-shadow:0 0 7px rgba(255,250,240,.38),0 0 18px rgba(201,168,76,.4)}
+.cd-lbl{color:var(--gold-light);opacity:.82}
+.cd-sep{color:var(--gold);text-shadow:0 0 10px rgba(201,168,76,.65)}
+@keyframes countdownOutdoorPulse{0%,100%{border-bottom-color:rgba(201,168,76,.3);box-shadow:0 4px 24px rgba(201,168,76,.14),inset 0 -1px rgba(245,230,184,.14)}50%{border-bottom-color:rgba(245,230,184,.72);box-shadow:0 5px 34px rgba(201,168,76,.34),inset 0 -1px rgba(245,230,184,.42)}}
+@keyframes countdownLightSweep{0%,45%{transform:translateX(-120%)}75%,100%{transform:translateX(120%)}}
+@keyframes countdownTitleGlow{from{opacity:.72;filter:brightness(.9)}to{opacity:1;filter:brightness(1.35)}}
+@media(prefers-reduced-motion:reduce){.countdown-bar,.countdown-bar::before,.cd-title{animation:none}}
 nav{top:71px}
 #hero,#info,#galeria,#presentes,#confirmar{padding-top:131px}
 #hero{height:100svh;min-height:100svh;overflow:hidden}
