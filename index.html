@@ -118,6 +118,15 @@ updateCD();setInterval(updateCD,1000);
 let ytPlayer=null,musicPlaying=false,unmuted=false;
 function onYouTubeIframeAPIReady(){ytPlayer=new YT.Player('yt-music',{videoId:'RGZh52IzLGU',playerVars:{autoplay:1,controls:0,loop:1,playlist:'RGZh52IzLGU',mute:1,playsinline:1,rel:0,fs:0},events:{onReady:function(e){e.target.mute();e.target.playVideo();musicPlaying=true;document.getElementById('musicIcon').classList.add('spin');document.getElementById('musicLbl').textContent='Pausar';}}});}
 (function(){var t=document.createElement('script');t.src='https://www.youtube.com/iframe_api';document.head.appendChild(t);})();
+function muteBackgroundMusicForVideo(){
+  unmuted=true;
+  document.removeEventListener('click',unmuteOnInteraction);
+  document.removeEventListener('touchstart',unmuteOnInteraction);
+  if(ytPlayer){ytPlayer.mute();ytPlayer.pauseVideo();}
+  musicPlaying=false;
+  document.getElementById('musicIcon').classList.remove('spin');
+  document.getElementById('musicLbl').textContent='Música';
+}
 function setupEmbeddedVideos(){
   document.querySelectorAll('.video-thumb[href*="youtube.com"],.video-thumb[href*="youtu.be"]').forEach(video=>{
     const source=video.getAttribute('href');
@@ -135,6 +144,7 @@ function setupEmbeddedVideos(){
     const play=event=>{
       event.preventDefault();
       if(video.querySelector('iframe'))return;
+      muteBackgroundMusicForVideo();
       video.removeAttribute('role');
       video.removeAttribute('tabindex');
       video.innerHTML=`<iframe src="https://www.youtube.com/embed/${encodeURIComponent(id)}?autoplay=1&rel=0&playsinline=1" title="Vídeo do pedido de casamento" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>`;
@@ -146,7 +156,7 @@ function setupEmbeddedVideos(){
 setupEmbeddedVideos();
 function unmuteOnInteraction(){if(unmuted||!ytPlayer)return;unmuted=true;ytPlayer.unMute();ytPlayer.setVolume(25);document.removeEventListener('click',unmuteOnInteraction);document.removeEventListener('touchstart',unmuteOnInteraction);}
 document.addEventListener('click',unmuteOnInteraction);document.addEventListener('touchstart',unmuteOnInteraction);
-function toggleMusic(){if(!ytPlayer)return;const icon=document.getElementById('musicIcon'),lbl=document.getElementById('musicLbl');if(musicPlaying){ytPlayer.pauseVideo();musicPlaying=false;icon.classList.remove('spin');lbl.textContent='Música';}else{ytPlayer.playVideo();musicPlaying=true;icon.classList.add('spin');lbl.textContent='Pausar';}}
+function toggleMusic(){if(!ytPlayer)return;const icon=document.getElementById('musicIcon'),lbl=document.getElementById('musicLbl');if(musicPlaying){ytPlayer.pauseVideo();musicPlaying=false;icon.classList.remove('spin');lbl.textContent='Música';}else{ytPlayer.unMute();ytPlayer.setVolume(25);ytPlayer.playVideo();musicPlaying=true;icon.classList.add('spin');lbl.textContent='Pausar';}}
 function openRsvpModal(){
   const modal=document.getElementById('confirmar');
   const form=modal.querySelector('.confirm-form-wrap');
