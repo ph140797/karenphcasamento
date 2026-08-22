@@ -1,6 +1,5 @@
 const { json } = require('./_http');
 const { saveRsvp } = require('./_db');
-const { appendRsvp } = require('./_google-sheets');
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return json(405, { error: 'Method not allowed' });
@@ -42,8 +41,6 @@ exports.handler = async (event) => {
       message: String(payload.message || '').slice(0, 1000),
       created_at: new Date().toISOString()
     });
-    await appendRsvp(rsvp);
-
     return json(200, { rsvp });
   } catch (error) {
     return json(500, { error: error.message || 'Não foi possível confirmar presença' });

@@ -62,13 +62,6 @@
     </section>
     <section class="table-wrap">
       <div class="section-head">
-        <div><h2>Google Sheets</h2><p id="googleSheetsStatus" class="muted">Verificando conexão...</p></div>
-        <button id="connectGoogleBtn">Conectar Google</button>
-      </div>
-      <p class="muted">As confirmações serão enviadas para a planilha Lista Confirmados, relacionando cada acompanhante ao código do convidado principal.</p>
-    </section>
-    <section class="table-wrap">
-      <div class="section-head">
         <h2>Cadastro de presentes</h2>
         <button id="saveGiftsBtn">Salvar presentes</button>
       </div>
@@ -92,7 +85,10 @@
       </table>
     </section>
     <section class="table-wrap">
-      <h2>Presenças</h2>
+      <div class="section-head">
+        <h2>Presenças</h2>
+        <button id="exportRsvpsBtn">Exportar CSV</button>
+      </div>
       <table>
         <thead><tr><th>Data</th><th>Nome</th><th>WhatsApp</th><th>Pessoas</th><th>Acompanhantes</th></tr></thead>
         <tbody id="rsvps"><tr><td colspan="5" class="muted">Informe o token para carregar.</td></tr></tbody>
@@ -108,6 +104,7 @@
     const loginScreen = document.getElementById('loginScreen');
     const adminShell = document.getElementById('adminShell');
     let giftCatalog = [];
+    let rsvpList = [];
     tokenInput.value = localStorage.getItem('weddingAdminToken') || '';
 
     function setMessage(message){
@@ -217,9 +214,9 @@
       if(!rsvpsRes.ok){ setMessage(rsvpsData.error || 'Não foi possível carregar presenças.'); return; }
       const orders = ordersData.orders || [];
       const rsvps = rsvpsData.rsvps || [];
+      rsvpList = rsvps;
       giftCatalog = giftsData.gifts || [];
       renderGifts();
-      await loadGoogleStatus();
       const paid = orders.filter((order) => order.status === 'paid');
       document.getElementById('paidTotal').textContent = money(paid.reduce((sum, order) => sum + Number(order.amount_total || 0), 0));
       document.getElementById('paidCount').textContent = paid.length;
@@ -247,24 +244,35 @@
       `).join('') : '<tr><td colspan="5" class="muted">Nenhuma presença confirmada ainda.</td></tr>';
     }
 
-    async function loadGoogleStatus(){
-      const token = tokenInput.value.trim();
-      const res = await fetch('/api/google-auth-status', { headers: { Authorization: `Bearer ${token}` } });
-      const data = await res.json();
-      const status = document.getElementById('googleSheetsStatus');
-      const button = document.getElementById('connectGoogleBtn');
-      if(!res.ok){ status.textContent = data.error || 'Não foi possível verificar o Google Sheets.'; return; }
-      if(!data.configured){ status.textContent = 'Credenciais OAuth ainda não configuradas no Netlify.'; button.textContent = 'Configurar credenciais'; return; }
-      status.textContent = data.connected ? `Conectado desde ${new Date(data.connectedAt).toLocaleString('pt-BR')}` : 'Aguardando conexão com uma conta Google autorizada.';
-      button.textContent = data.connected ? 'Reconectar Google' : 'Conectar Google';
+    function csvCell(value){
+      let text = String(value ?? '').replace(/\r?\n/g, ' ').trim();
+      if(/^[=+\-@]/.test(text)) text = `'${text}`;
+      return `"${text.replace(/"/g, '""')}"`;
     }
 
-    async function connectGoogle(){
-      const token = tokenInput.value.trim();
-      const res = await fetch('/api/google-auth-start', { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
-      const data = await res.json();
-      if(!res.ok){ setMessage(data.error || 'Não foi possível iniciar o login Google.'); return; }
-      window.location.href = data.url;
+    function exportRsvpsCsv(){
+      if(!rsvpList.length){ setMessage('Não há confirmações para exportar.'); return; }
+      const headers = ['Código da pessoa','Nome','Tipo','Código do convidado principal','Convidado principal','WhatsApp do convidado','Data da confirmação','Total no grupo','Mensagem'];
+      const rows = [headers];
+      rsvpList.forEach((rsvp) => {
+        const guestCode = rsvp.id || `convidado-${rows.length}`;
+        const date = new Date(rsvp.created_at || rsvp.updated_at).toLocaleString('pt-BR');
+        const guests = Array.isArray(rsvp.guests) && rsvp.guests.length ? rsvp.guests : [rsvp.name];
+        rows.push([guestCode, rsvp.name, 'Convidado', '', rsvp.name, rsvp.phone || '', date, rsvp.guest_count || guests.length, rsvp.message || '']);
+        guests.slice(1).forEach((companion, index) => {
+          rows.push([`${guestCode}-A${String(index + 1).padStart(2, '0')}`, companion, 'Acompanhante', guestCode, rsvp.name, rsvp.phone || '', date, rsvp.guest_count || guests.length, rsvp.message || '']);
+        });
+      });
+      const csv = '\uFEFF' + rows.map(row => row.map(csvCell).join(';')).join('\r\n');
+      const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `lista-confirmados-${new Date().toISOString().slice(0,10)}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      setMessage('CSV de confirmações exportado com sucesso.');
     }
 
     document.getElementById('saveTokenBtn').addEventListener('click', validateToken);
@@ -272,7 +280,7 @@
     document.getElementById('refreshBtn').addEventListener('click', loadOrders);
     document.getElementById('addGiftBtn').addEventListener('click', addGift);
     document.getElementById('saveGiftsBtn').addEventListener('click', saveGifts);
-    document.getElementById('connectGoogleBtn').addEventListener('click', connectGoogle);
+    document.getElementById('exportRsvpsBtn').addEventListener('click', exportRsvpsCsv);
   </script>
 </body>
 </html>
