@@ -71,3 +71,14 @@ Open:
 
 Use `ADMIN_TOKEN` as the password. The dashboard shows paid gifts, pending checkouts, total paid amount, and RSVP guest count.
 It also lets you register gifts with image, name, value, and special flag. Pix orders are saved as `pix_pending`; after checking the bank receipt, use "Marcar pago" in admin so the gifts become unavailable on the public page.
+
+## Google Sheets para confirmações
+
+1. No Google Cloud, habilite a Google Sheets API.
+2. Configure a tela de consentimento OAuth e adicione como usuário de teste a conta que acessa a planilha.
+3. Crie credenciais OAuth do tipo **Aplicativo da Web**.
+4. Cadastre `https://SEU-SITE.netlify.app/api/google-oauth-callback` em **URIs de redirecionamento autorizados**.
+5. Preencha no Netlify as variáveis `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, `GOOGLE_OAUTH_REDIRECT_URI`, `GOOGLE_SHEETS_SPREADSHEET_ID` e `GOOGLE_SHEETS_RANGE` descritas em `.env.example`.
+6. Acesse `/admin`, autentique-se com `ADMIN_TOKEN` e clique em **Conectar Google**.
+
+A planilha usa as colunas `Código`, `Nome`, `Tipo` e `Código Convidado`. O convidado principal recebe um UUID. Cada acompanhante recebe um código derivado e referencia o UUID do convidado principal na quarta coluna.

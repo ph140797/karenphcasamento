@@ -17,6 +17,15 @@
 .nh-mono img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 0 12px rgba(201,168,76,0.5));opacity:0.6}
 .nh-date{text-align:center;font-size:11px;letter-spacing:0.25em;text-transform:uppercase;color:rgba(201,168,76,0.35);font-weight:300}
 @media(max-width:768px){.nh-wrap{padding:4rem 1.5rem}.nh-deco-left,.nh-deco-right{display:none}.nh-p{font-size:17px;line-height:1.9}}
+/* RSVP modal */
+#confirmar.rsvp-modal-open{display:flex;position:fixed;inset:0;z-index:800;background:rgba(8,5,2,.9);padding:1rem;align-items:center;justify-content:center;overflow-y:auto;backdrop-filter:blur(8px)}
+#confirmar.rsvp-modal-open .confirm-hero{display:none}
+#confirmar.rsvp-modal-open .confirm-form-wrap{position:relative;width:min(960px,100%);max-height:92vh;overflow-y:auto;margin:auto;background:var(--cream);padding:3rem 2rem 2rem;box-shadow:0 24px 80px rgba(0,0,0,.45)}
+.rsvp-modal-close{position:absolute;top:.8rem;right:.8rem;z-index:2;width:38px;height:38px;border:1px solid var(--gold-light);background:transparent;color:var(--gold-dark);font-size:20px;cursor:pointer}
+body.rsvp-modal-visible{overflow:hidden}
+@media(max-width:768px){#confirmar.rsvp-modal-open{padding:.5rem;align-items:flex-start}#confirmar.rsvp-modal-open .confirm-form-wrap{padding:3.5rem 1rem 1.25rem;max-height:none}.rsvp-modal-close{top:.7rem;right:.7rem}}
+.cf-input.cf-invalid{border-color:#a33!important;background:#fffafa}
+.cf-field-error{display:block;margin-top:.45rem;color:#923a32;font-size:12px;line-height:1.45;letter-spacing:.02em}
 
 /* Nossa Historia band — always visible when hero active */
 #hero.active ~ .nh-band{display:block}
@@ -85,7 +94,67 @@ function onYouTubeIframeAPIReady(){ytPlayer=new YT.Player('yt-music',{videoId:'R
 function unmuteOnInteraction(){if(unmuted||!ytPlayer)return;unmuted=true;ytPlayer.unMute();ytPlayer.setVolume(25);document.removeEventListener('click',unmuteOnInteraction);document.removeEventListener('touchstart',unmuteOnInteraction);}
 document.addEventListener('click',unmuteOnInteraction);document.addEventListener('touchstart',unmuteOnInteraction);
 function toggleMusic(){if(!ytPlayer)return;const icon=document.getElementById('musicIcon'),lbl=document.getElementById('musicLbl');if(musicPlaying){ytPlayer.pauseVideo();musicPlaying=false;icon.classList.remove('spin');lbl.textContent='Música';}else{ytPlayer.playVideo();musicPlaying=true;icon.classList.add('spin');lbl.textContent='Pausar';}}
-function showSection(id){document.querySelectorAll('section').forEach(s=>s.classList.remove('active'));const sec=document.getElementById(id);sec.classList.add('active');if(id==='hero'){window.scrollTo({top:0,behavior:'smooth'});return;}requestAnimationFrame(()=>{const top=sec.getBoundingClientRect().top+window.scrollY-104;window.scrollTo({top:Math.max(0,top),behavior:'smooth'});});}
+function openRsvpModal(){
+  const modal=document.getElementById('confirmar');
+  const form=modal.querySelector('.confirm-form-wrap');
+  if(!form.querySelector('.rsvp-modal-close'))form.insertAdjacentHTML('afterbegin','<button class="rsvp-modal-close" type="button" aria-label="Fechar confirmação" onclick="closeRsvpModal()">&#10005;</button>');
+  modal.classList.add('rsvp-modal-open');
+  document.body.classList.add('rsvp-modal-visible');
+  setTimeout(()=>document.getElementById('cfName').focus(),50);
+}
+function closeRsvpModal(){document.getElementById('confirmar').classList.remove('rsvp-modal-open','active');document.body.classList.remove('rsvp-modal-visible');}
+function showSection(id){if(id==='confirmar'){openRsvpModal();return;}document.querySelectorAll('section').forEach(s=>s.classList.remove('active'));const sec=document.getElementById(id);sec.classList.add('active');if(id==='hero'){window.scrollTo({top:0,behavior:'smooth'});return;}requestAnimationFrame(()=>{const top=sec.getBoundingClientRect().top+window.scrollY-104;window.scrollTo({top:Math.max(0,top),behavior:'smooth'});});}
+document.addEventListener('keydown',event=>{if(event.key==='Escape')closeRsvpModal();});
+function formatBrazilianPhone(value){
+  const digits=value.replace(/\D/g,'').slice(0,11);
+  if(digits.length<=2)return digits.length?`(${digits}`:'';
+  if(digits.length<=6)return `(${digits.slice(0,2)}) ${digits.slice(2)}`;
+  if(digits.length<=10)return `(${digits.slice(0,2)}) ${digits.slice(2,6)}-${digits.slice(6)}`;
+  return `(${digits.slice(0,2)}) ${digits.slice(2,7)}-${digits.slice(7)}`;
+}
+function isValidBrazilianPhone(value){
+  const digits=value.replace(/\D/g,'');
+  return /^(?:[1-9]{2})(?:\d{8}|\d{9})$/.test(digits) && !/^(\d)\1+$/.test(digits);
+}
+function isValidFullName(value){
+  const parts=value.trim().split(/\s+/);
+  return parts.length>=2 && parts.every(part=>/^[A-Za-zÀ-ÖØ-öø-ÿ'’-]{2,}$/.test(part));
+}
+function showFieldError(input,message){
+  input.classList.add('cf-invalid');
+  input.setAttribute('aria-invalid','true');
+  let error=input.nextElementSibling;
+  if(!error||!error.classList.contains('cf-field-error')){error=document.createElement('span');error.className='cf-field-error';input.insertAdjacentElement('afterend',error);}
+  error.textContent=message;
+}
+function clearFieldError(input){
+  input.classList.remove('cf-invalid');
+  input.removeAttribute('aria-invalid');
+  const error=input.nextElementSibling;
+  if(error&&error.classList.contains('cf-field-error'))error.remove();
+}
+function validateNameField(input,label='nome'){
+  if(!input.value.trim()){showFieldError(input,`Informe o ${label} completo.`);return false;}
+  if(!isValidFullName(input.value)){showFieldError(input,`Informe nome e sobrenome. Exemplo: Victor Silva.`);return false;}
+  clearFieldError(input);return true;
+}
+function validatePhoneField(input){
+  if(!input.value.trim()){showFieldError(input,'Informe seu WhatsApp com DDD.');return false;}
+  if(!isValidBrazilianPhone(input.value)){showFieldError(input,'Digite um número válido. Exemplo: (11) 99999-9999.');return false;}
+  clearFieldError(input);return true;
+}
+const cfNameInput=document.getElementById('cfName');
+const cfPhoneInput=document.getElementById('cfPhone');
+cfPhoneInput.setAttribute('inputmode','numeric');
+cfPhoneInput.setAttribute('maxlength','15');
+cfPhoneInput.setAttribute('autocomplete','tel');
+cfPhoneInput.addEventListener('input',event=>{event.target.value=formatBrazilianPhone(event.target.value);});
+cfNameInput.addEventListener('blur',()=>validateNameField(cfNameInput));
+cfPhoneInput.addEventListener('blur',()=>validatePhoneField(cfPhoneInput));
+cfNameInput.addEventListener('input',()=>{if(isValidFullName(cfNameInput.value))clearFieldError(cfNameInput);});
+cfPhoneInput.addEventListener('input',()=>{if(isValidBrazilianPhone(cfPhoneInput.value))clearFieldError(cfPhoneInput);});
+document.getElementById('cfGuestsWrap').addEventListener('focusout',event=>{if(event.target.matches('.cf-guest-input input'))validateNameField(event.target,'nome do acompanhante');});
+document.getElementById('cfGuestsWrap').addEventListener('input',event=>{if(event.target.matches('.cf-guest-input input')&&isValidFullName(event.target.value))clearFieldError(event.target);});
 let cart=[];
 const PIX_KEY='11953396177';
 const PIX_QR_CODE_IMAGE='/assets/pix-qr-code.png';
@@ -211,23 +280,29 @@ function finalizarCompra(){
 }
 
 /* CONFIRMATION */
-let guestCount=1;
-function changeCount(d){guestCount=Math.max(1,Math.min(10,guestCount+d));document.getElementById('cfCountNum').textContent=guestCount;renderGuestFields();}
+let guestCount=0;
+document.getElementById('cfCountNum').textContent='0';
+document.querySelector('#cfCountNum').closest('.cf-group').querySelector('.cf-label').innerHTML='Quantos acompanhantes ir&atilde;o com voc&ecirc;?';
+document.querySelector('#cfCountNum').closest('.cf-group').querySelector('.cf-count-hint').innerHTML='n&atilde;o inclui voc&ecirc;';
+function changeCount(d){guestCount=Math.max(0,Math.min(9,guestCount+d));document.getElementById('cfCountNum').textContent=guestCount;renderGuestFields();}
 function renderGuestFields(){
   const wrap=document.getElementById('cfGuestsWrap');
-  if(guestCount<=1){wrap.innerHTML='';return;}
+  const savedValues=Array.from(wrap.querySelectorAll('.cf-guest-input input')).map(input=>input.value);
+  if(guestCount===0){wrap.innerHTML='';return;}
   let html='<div class="cf-group" style="margin-top:1rem"><p class="cf-label">Nome dos acompanhantes</p>';
-  for(let i=2;i<=guestCount;i++){html+=`<div class="cf-guest-input"><label>Acompanhante ${i-1}</label><input class="cf-input" type="text" id="cfGuest${i}" placeholder="Nome completo"></div>`;}
+  for(let i=1;i<=guestCount;i++){html+=`<div class="cf-guest-input"><label>Acompanhante ${i}</label><input class="cf-input" type="text" id="cfGuest${i}" placeholder="Nome completo"></div>`;}
   html+='</div>';wrap.innerHTML=html;
+  savedValues.slice(0,guestCount).forEach((value,index)=>{document.getElementById('cfGuest'+(index+1)).value=value;});
 }
 function cfNext(){
   const name=document.getElementById('cfName').value.trim();
   const phone=document.getElementById('cfPhone').value.trim();
-  if(!name){alert('Por favor, informe seu nome.');return;}
-  if(!phone){alert('Por favor, informe seu WhatsApp.');return;}
+  const nameValid=validateNameField(document.getElementById('cfName'));
+  const phoneValid=validatePhoneField(document.getElementById('cfPhone'));
+  if(!nameValid||!phoneValid){document.querySelector('.cf-invalid').focus();return;}
   let guests=[name];
-  for(let i=2;i<=guestCount;i++){const g=document.getElementById('cfGuest'+i);if(g&&g.value.trim())guests.push(g.value.trim());}
-  let sum=`<strong>${name}</strong><br>WhatsApp: ${phone}<br>Total de pessoas: <strong>${guestCount}</strong>`;
+  for(let i=1;i<=guestCount;i++){const g=document.getElementById('cfGuest'+i);if(!validateNameField(g,'nome do acompanhante')){g.focus();return;}guests.push(g.value.trim());}
+  let sum=`Convidado: <strong>${name}</strong><br>WhatsApp: ${phone}<br>Total de pessoas: <strong>${guestCount+1}</strong>`;
   if(guests.length>1){sum+='<br>Acompanhantes: '+guests.slice(1).join(', ');}
   document.getElementById('cfSummary').innerHTML=sum;
   document.getElementById('cfStep1').style.display='none';
@@ -238,9 +313,10 @@ async function cfSubmit(){
   const name=document.getElementById('cfName').value.trim();
   const phone=document.getElementById('cfPhone').value.trim();
   let guests=[name];
-  for(let i=2;i<=guestCount;i++){const g=document.getElementById('cfGuest'+i);if(g&&g.value.trim())guests.push(g.value.trim());}
+  for(let i=1;i<=guestCount;i++){const g=document.getElementById('cfGuest'+i);if(g&&g.value.trim())guests.push(g.value.trim());}
+  const message=document.getElementById('cfMessage').value.trim();
   try{
-    const res=await fetch('/api/rsvp',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name,phone,guests,guestCount})});
+    const res=await fetch('/api/rsvp',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name,phone,guests,guestCount:guests.length,message})});
     const data=await res.json();
     if(!res.ok)throw new Error(data.error||'Não foi possível confirmar presença.');
     document.getElementById('cfSuccessMsg').textContent=name+', sua presença foi confirmada!';
