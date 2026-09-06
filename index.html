@@ -168,6 +168,22 @@ const wedding=new Date('2027-03-26T17:30:00-03:00');
 function updateCD(){const diff=wedding-new Date();if(diff<=0){document.querySelector('.countdown-bar').innerHTML='<span style="font-family:Cormorant Garamond,serif;font-style:italic;color:var(--gold);font-size:18px">Hoje é o grande dia! ♡</span>';return;}const d=Math.floor(diff/86400000),h=Math.floor((diff%86400000)/3600000),m=Math.floor((diff%3600000)/60000),s=Math.floor((diff%60000)/1000);document.getElementById('cd-days').textContent=String(d).padStart(2,'0');document.getElementById('cd-hours').textContent=String(h).padStart(2,'0');document.getElementById('cd-mins').textContent=String(m).padStart(2,'0');document.getElementById('cd-secs').textContent=String(s).padStart(2,'0');}
 updateCD();setInterval(updateCD,1000);
 let ytPlayer=null,musicPlaying=false,unmuted=false,musicReady=false,musicUserStopped=false;
+// Fonte da música: se assets/musica.mp3 existir, usa <audio> nativo (toca com som no primeiro toque em
+// qualquer celular). Se não existir, cai no player do YouTube abaixo.
+const MUSIC_SOURCES=['assets/musica.mp3','assets/musica.m4a'];
+let MUSIC_SRC=null,musicMode=null,bgAudio=null;
+async function initMusic(){
+  for(const src of MUSIC_SOURCES){try{const r=await fetch(src,{method:'HEAD',cache:'no-store'});if(r.ok){MUSIC_SRC=src;setupAudioMusic();return;}}catch(e){}}
+  musicMode='youtube';(function(){var t=document.createElement('script');t.src='https://www.youtube.com/iframe_api';document.head.appendChild(t);})();
+}
+function setupAudioMusic(){
+  musicMode='audio';bgAudio=new Audio(MUSIC_SRC);bgAudio.loop=true;bgAudio.volume=0.25;bgAudio.preload='auto';bgAudio.setAttribute('playsinline','');
+  bgAudio.addEventListener('playing',()=>{unmuted=true;setMusicUI(true);removeMusicGestures();});
+  bgAudio.addEventListener('pause',()=>setMusicUI(false));
+  bgAudio.addEventListener('error',()=>{if(!unmuted){musicMode='youtube';(function(){var t=document.createElement('script');t.src='https://www.youtube.com/iframe_api';document.head.appendChild(t);})();}});
+  musicReady=true;tryStartMusic();
+}
+initMusic();
 // A música é um player do YouTube escondido. Os navegadores (Android/iOS/desktop) bloqueiam áudio
 // automático até o primeiro gesto do usuário, e nem sempre avisam. Por isso: tentamos tocar ao
 // carregar e a cada gesto, e só consideramos "tocando" quando o player confirma PLAYING sem mute.
@@ -176,14 +192,17 @@ function onYouTubeIframeAPIReady(){ytPlayer=new YT.Player('yt-music',{videoId:'R
   onAutoplayBlocked:function(){try{ytPlayer.mute();ytPlayer.playVideo();}catch(e){}unmuted=false;setMusicUI(false);},
   onStateChange:function(e){syncMusicState();}
 }});}
-function musicIsAudible(){try{return ytPlayer.getPlayerState()===YT.PlayerState.PLAYING&&!ytPlayer.isMuted();}catch(e){return false;}}
-function syncMusicState(){if(!ytPlayer)return;if(musicIsAudible()){unmuted=true;setMusicUI(true);removeMusicGestures();}else{unmuted=false;setMusicUI(false);}}
-function tryStartMusic(){if(!ytPlayer||!musicReady||musicUserStopped)return;try{ytPlayer.unMute();ytPlayer.setVolume(25);ytPlayer.playVideo();}catch(e){}setTimeout(syncMusicState,1200);}
-(function(){var t=document.createElement('script');t.src='https://www.youtube.com/iframe_api';document.head.appendChild(t);})();
+function musicIsAudible(){if(musicMode==='audio')return !!bgAudio&&!bgAudio.paused&&!bgAudio.muted;try{return ytPlayer.getPlayerState()===YT.PlayerState.PLAYING&&!ytPlayer.isMuted();}catch(e){return false;}}
+function syncMusicState(){if(musicMode==='youtube'&&!ytPlayer)return;if(musicIsAudible()){unmuted=true;setMusicUI(true);removeMusicGestures();}else{unmuted=false;setMusicUI(false);}}
+function tryStartMusic(){
+  if(!musicReady||musicUserStopped)return;
+  if(musicMode==='audio'){if(!bgAudio)return;bgAudio.muted=false;const pr=bgAudio.play();if(pr&&pr.catch)pr.catch(()=>{unmuted=false;setMusicUI(false);});return;}
+  if(!ytPlayer)return;try{ytPlayer.unMute();ytPlayer.setVolume(25);ytPlayer.playVideo();}catch(e){}setTimeout(syncMusicState,1200);
+}
 function muteBackgroundMusicForVideo(){
   musicUserStopped=true;
   removeMusicGestures();
-  if(ytPlayer){try{ytPlayer.mute();ytPlayer.pauseVideo();}catch(e){}}
+  try{if(musicMode==='audio'&&bgAudio)bgAudio.pause();else if(ytPlayer){ytPlayer.mute();ytPlayer.pauseVideo();}}catch(e){}
   setMusicUI(false);
 }
 function setupEmbeddedVideos(){
@@ -257,7 +276,7 @@ function setMusicUI(playing){musicPlaying=playing;const icon=document.getElement
 function unmuteOnInteraction(){if(unmuted||musicUserStopped)return;tryStartMusic();}
 function removeMusicGestures(){MUSIC_GESTURES.forEach(ev=>document.removeEventListener(ev,unmuteOnInteraction));}
 MUSIC_GESTURES.forEach(ev=>document.addEventListener(ev,unmuteOnInteraction,{passive:true}));
-function toggleMusic(){if(!ytPlayer)return;if(musicPlaying){musicUserStopped=true;try{ytPlayer.pauseVideo();}catch(e){}setMusicUI(false);}else{musicUserStopped=false;tryStartMusic();}}
+function toggleMusic(){if(!musicReady)return;if(musicPlaying){musicUserStopped=true;try{if(musicMode==='audio')bgAudio.pause();else ytPlayer.pauseVideo();}catch(e){}setMusicUI(false);}else{musicUserStopped=false;tryStartMusic();}}
 function openRsvpModal(){
   const modal=document.getElementById('confirmar');
   const form=modal.querySelector('.confirm-form-wrap');

@@ -83,6 +83,10 @@ O endpoint confirma a origem pelo cabeçalho `asaas-access-token` e atualiza o p
 
 Abra `/admin` e use `ADMIN_TOKEN`. O painel mostra qual banco está ativo, o cadastro de presentes (adicionar, remover, salvar e importar o catálogo padrão), os pedidos e as confirmações de presença com exportação CSV.
 
+## Música de fundo
+
+Coloque a faixa em `assets/musica.mp3` ou `assets/musica.m4a` (compra da iTunes Store vem em .m4a; ideal até ~8 MB) e faça o deploy. Com o arquivo presente o site usa um player de áudio nativo, que começa a tocar no primeiro toque ou clique em qualquer navegador, celular incluído. Sem o arquivo, o site usa o player do YouTube, que no celular nem sempre libera o som.
+
 ## Desenvolvimento
 
     npm install
