@@ -172,15 +172,20 @@ let ytPlayer=null,musicPlaying=false,unmuted=false,musicReady=false,musicUserSto
 // qualquer celular). Se não existir, cai no player do YouTube abaixo.
 const MUSIC_SOURCES=['assets/musica.mp3','assets/musica.m4a'];
 let MUSIC_SRC=null,musicMode=null,bgAudio=null;
+const MUSIC_DEBUG=/[?&]musicdebug=1/.test(location.search);
+function musicDebug(msg){if(!MUSIC_DEBUG)return;let el=document.getElementById('musicDebug');if(!el){el=document.createElement('pre');el.id='musicDebug';el.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;margin:0;padding:6px 8px;background:rgba(0,0,0,.85);color:#0f0;font:11px/1.4 monospace;max-height:40vh;overflow:auto;white-space:pre-wrap';document.body.appendChild(el);}el.textContent+=new Date().toISOString().slice(11,19)+' '+msg+'\n';el.scrollTop=el.scrollHeight;}
 async function initMusic(){
-  for(const src of MUSIC_SOURCES){try{const r=await fetch(src,{method:'HEAD',cache:'no-store'});if(r.ok){MUSIC_SRC=src;setupAudioMusic();return;}}catch(e){}}
+  musicDebug('init ua='+navigator.userAgent.slice(0,80));
+  for(const src of MUSIC_SOURCES){try{const r=await fetch(src,{method:'HEAD',cache:'no-store'});musicDebug('HEAD '+src+' -> '+r.status);if(r.ok){MUSIC_SRC=src;setupAudioMusic();return;}}catch(e){musicDebug('HEAD '+src+' erro '+e.message);}}
+  musicDebug('fallback youtube');
   musicMode='youtube';(function(){var t=document.createElement('script');t.src='https://www.youtube.com/iframe_api';document.head.appendChild(t);})();
 }
 function setupAudioMusic(){
   musicMode='audio';bgAudio=new Audio(MUSIC_SRC);bgAudio.loop=true;bgAudio.volume=0.25;bgAudio.preload='auto';bgAudio.setAttribute('playsinline','');
-  bgAudio.addEventListener('playing',()=>{unmuted=true;setMusicUI(true);removeMusicGestures();});
-  bgAudio.addEventListener('pause',()=>setMusicUI(false));
-  bgAudio.addEventListener('error',()=>{if(!unmuted){musicMode='youtube';(function(){var t=document.createElement('script');t.src='https://www.youtube.com/iframe_api';document.head.appendChild(t);})();}});
+  bgAudio.addEventListener('playing',()=>{musicDebug('playing');unmuted=true;setMusicUI(true);removeMusicGestures();});
+  bgAudio.addEventListener('pause',()=>{musicDebug('pause');setMusicUI(false);});
+  ['canplay','stalled','suspend','abort'].forEach(ev=>bgAudio.addEventListener(ev,()=>musicDebug(ev+' readyState='+bgAudio.readyState)));
+  bgAudio.addEventListener('error',()=>{musicDebug('erro de mídia code='+(bgAudio.error&&bgAudio.error.code));if(!unmuted){musicMode='youtube';(function(){var t=document.createElement('script');t.src='https://www.youtube.com/iframe_api';document.head.appendChild(t);})();}});
   musicReady=true;tryStartMusic();
 }
 initMusic();
@@ -196,7 +201,7 @@ function musicIsAudible(){if(musicMode==='audio')return !!bgAudio&&!bgAudio.paus
 function syncMusicState(){if(musicMode==='youtube'&&!ytPlayer)return;if(musicIsAudible()){unmuted=true;setMusicUI(true);removeMusicGestures();}else{unmuted=false;setMusicUI(false);}}
 function tryStartMusic(){
   if(!musicReady||musicUserStopped)return;
-  if(musicMode==='audio'){if(!bgAudio)return;bgAudio.muted=false;const pr=bgAudio.play();if(pr&&pr.catch)pr.catch(()=>{unmuted=false;setMusicUI(false);});return;}
+  if(musicMode==='audio'){if(!bgAudio)return;bgAudio.muted=false;musicDebug('play()');const pr=bgAudio.play();if(pr&&pr.then)pr.then(()=>musicDebug('play ok')).catch((e)=>{musicDebug('play rejeitado: '+e.name+' '+e.message);unmuted=false;setMusicUI(false);});return;}
   if(!ytPlayer)return;try{ytPlayer.unMute();ytPlayer.setVolume(25);ytPlayer.playVideo();}catch(e){}setTimeout(syncMusicState,1200);
 }
 function muteBackgroundMusicForVideo(){
@@ -271,9 +276,9 @@ function setupGalleryLightbox(){
 setupGalleryLightbox();
 // Autoplay com som é bloqueado pelos navegadores até o primeiro gesto do usuário.
 // Tentamos tocar ao carregar; se bloquear, tocamos (com som) no primeiro toque/clique/tecla em qualquer lugar.
-const MUSIC_GESTURES=['pointerdown','touchend','click','keydown'];
+const MUSIC_GESTURES=['pointerup','touchend','click','keydown','pointerdown'];
 function setMusicUI(playing){musicPlaying=playing;const icon=document.getElementById('musicIcon'),lbl=document.getElementById('musicLbl');if(!icon||!lbl)return;icon.classList.toggle('spin',playing);lbl.textContent=playing?'Pausar':'Tocar música';}
-function unmuteOnInteraction(){if(unmuted||musicUserStopped)return;tryStartMusic();}
+function unmuteOnInteraction(ev){if(musicUserStopped)return;if(musicMode==='audio'){if(bgAudio&&!bgAudio.paused)return;}else if(unmuted)return;musicDebug('gesto: '+(ev&&ev.type));tryStartMusic();}
 function removeMusicGestures(){MUSIC_GESTURES.forEach(ev=>document.removeEventListener(ev,unmuteOnInteraction));}
 MUSIC_GESTURES.forEach(ev=>document.addEventListener(ev,unmuteOnInteraction,{passive:true}));
 function toggleMusic(){if(!musicReady)return;if(musicPlaying){musicUserStopped=true;try{if(musicMode==='audio')bgAudio.pause();else ytPlayer.pauseVideo();}catch(e){}setMusicUI(false);}else{musicUserStopped=false;tryStartMusic();}}
