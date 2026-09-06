@@ -4,13 +4,14 @@
   "private": true,
   "description": "Wedding website for Karen and Paulo Henrique with Asaas Checkout and gift admin APIs.",
   "scripts": {
-    "build": "npm run check",
+    "build": "npm run check && node scripts/deploy-db.js",
     "dev": "netlify dev",
     "start": "netlify dev",
     "migrate": "node scripts/migrate-supabase.js",
     "seed:gifts": "node scripts/seed-gifts.js",
     "seed:gifts:sql": "node scripts/seed-gifts.js --sql",
-    "check": "node --check scripts/migrate-supabase.js && node --check scripts/seed-gifts.js && for f in netlify/functions/*.js; do node --check \"$f\" || exit 1; done"
+    "check": "for f in scripts/*.js netlify/functions/*.js; do node --check \"$f\" || exit 1; done",
+    "db:deploy": "node scripts/deploy-db.js"
   },
   "dependencies": {
     "@netlify/blobs": "^8.2.0",

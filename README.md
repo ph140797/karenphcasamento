@@ -19,12 +19,19 @@ Sem `SUPABASE_URL` e chave, as functions caem automaticamente em Netlify Blobs (
 ### Configuração inicial
 
 1. Crie o projeto no Supabase e copie a URL e a chave `secret` (Project Settings > API Keys).
-2. Defina `SUPABASE_URL` e `SUPABASE_SECRET_KEY` no `.env` e nas variáveis da Netlify.
-3. Aplique o schema: `npm run migrate` (precisa de `SUPABASE_DB_URL`) ou rode os arquivos de `supabase/manual-sql/` no SQL Editor, na ordem.
-4. Cadastre o catálogo padrão de presentes por um destes caminhos:
-   - botão **Importar catálogo do site** no `/admin`;
-   - `npm run seed:gifts` (adicione `-- --overwrite` para atualizar os existentes);
-   - `supabase/manual-sql/004_seed_gifts.sql` no SQL Editor.
+2. Defina `SUPABASE_URL`, `SUPABASE_SECRET_KEY` e `SUPABASE_DB_URL` no `.env` e nas variáveis da Netlify.
+3. Faça o deploy. O build roda `scripts/deploy-db.js`, que aplica `supabase/migrations/` e cadastra os presentes do catálogo padrão que ainda não existem.
+
+Se preferir fazer à mão: `npm run migrate` aplica o schema, e o catálogo pode ser cadastrado pelo botão **Importar catálogo do site** no `/admin`, por `npm run seed:gifts` (`-- --overwrite` atualiza os existentes) ou por `supabase/manual-sql/004_seed_gifts.sql` no SQL Editor.
+
+### Banco no deploy
+
+`npm run build` executa `npm run check` e depois `node scripts/deploy-db.js`. Esse passo:
+
+- só age quando há credenciais do Supabase no ambiente;
+- aplica as migrations quando `SUPABASE_DB_URL` (ou `SUPABASE_ACCESS_TOKEN`) existe;
+- insere no banco os presentes de `_gift-catalog.js` que faltam, sem alterar os já cadastrados;
+- registra erros no log do build sem derrubar o deploy. `DB_DEPLOY_STRICT=true` faz o build falhar em caso de erro, e `DB_DEPLOY_SEED_OVERWRITE=true` faz o seed atualizar nome, preço e imagem dos existentes.
 
 ## Variáveis da Netlify
 
@@ -36,6 +43,7 @@ Sem `SUPABASE_URL` e chave, as functions caem automaticamente em Netlify Blobs (
 - `URL`
 - `SUPABASE_URL`
 - `SUPABASE_SECRET_KEY` (ou `SUPABASE_SERVICE_ROLE_KEY`)
+- `SUPABASE_DB_URL` (para as migrations no deploy)
 
 Veja `.env.example` para o modelo completo.
 
