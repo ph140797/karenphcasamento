@@ -76,7 +76,8 @@ exports.handler = async (event) => {
 
     const checkout = await asaasPost('/checkouts', {
       billingTypes: ['CREDIT_CARD'],
-      chargeTypes: installments > 1 ? ['INSTALLMENT'] : ['DETACHED'],
+      // A Asaas exige DETACHED junto com INSTALLMENT; maxInstallmentCount limita ao escolhido no site.
+      chargeTypes: installments > 1 ? ['DETACHED', 'INSTALLMENT'] : ['DETACHED'],
       ...(installments > 1 ? { installment: { maxInstallmentCount: installments } } : {}),
       minutesToExpire,
       externalReference: orderId,
