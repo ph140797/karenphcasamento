@@ -85,6 +85,8 @@ body.gallery-lightbox-open{overflow:hidden}
 nav{top:71px}
 #hero,#info,#galeria,#presentes,#confirmar{padding-top:131px}
 #hero{height:100svh;min-height:100svh;overflow:hidden}
+/* Mobile: o hero cresce com o conteúdo em vez de cortar os botões (regra acima fixa 100svh para desktop). */
+@media(max-width:768px){#hero{height:auto;min-height:100svh;overflow:visible;padding-bottom:3rem}}
 #galeria .sec-inner{max-width:1200px}
 .hero-inner{padding:.5rem 1rem}
 .hero-monogram{width:clamp(88px,16vh,155px);height:clamp(88px,16vh,155px);margin-bottom:clamp(.75rem,2.5vh,2.5rem)}
