@@ -257,9 +257,9 @@
         <tr>
           <td>${new Date(order.created_at || order.updated_at).toLocaleString('pt-BR')}</td>
           <td class="status">${order.status}</td>
-          <td>${order.payment_method || ''}</td>
+          <td>${order.payment_method || ''}${Number(order.installments) > 1 ? ` · ${order.installments}x` : ''}</td>
           <td>${order.customer_name || ''}<br><span class="muted">${order.customer_email || ''}</span></td>
-          <td>${money(order.amount_total)}</td>
+          <td>${money(order.amount_total)}${Number(order.amount_fee) > 0 ? `<br><span class="muted">presentes ${money(order.amount_gifts)} + taxa ${money(order.amount_fee)}</span>` : ''}</td>
           <td class="items">${itemText(order.items)}</td>
           <td>${order.status === 'pix_pending' ? `<button class="ghost" onclick="markOrderPaid('${order.id}')">Marcar pago</button>` : ''}</td>
         </tr>

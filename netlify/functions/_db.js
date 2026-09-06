@@ -63,14 +63,27 @@ async function listLocal(bucket) {
 
 // ---------- pedidos ----------
 
+// Upsert tolerante a colunas ainda não migradas: se o PostgREST reclamar de uma
+// coluna desconhecida (PGRST204), remove o campo e tenta de novo, para uma
+// migration atrasada não derrubar o checkout. O campo omitido é logado.
+async function upsertDroppingUnknownColumns(table, record, maxRetries = 6) {
+  const payload = { ...record };
+  for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+    const { error } = await getSupabase().from(table).upsert(payload, { onConflict: 'id' });
+    if (!error) return payload;
+    const match = error.code === 'PGRST204' && /'([^']+)' column/.exec(error.message || '');
+    if (!match || !(match[1] in payload)) throw error;
+    console.warn(`[db] coluna ${table}.${match[1]} não existe; gravando sem ela. Rode as migrations.`);
+    delete payload[match[1]];
+  }
+  throw new Error(`Upsert em ${table} falhou após remover colunas desconhecidas.`);
+}
+
 async function saveOrder(order) {
   const record = { ...order, updated_at: nowIso() };
 
   if (hasSupabase) {
-    const { error } = await getSupabase()
-      .from(TABLES.orders)
-      .upsert(record, { onConflict: 'id' });
-    if (error) throw error;
+    await upsertDroppingUnknownColumns(TABLES.orders, record);
     return record;
   }
 

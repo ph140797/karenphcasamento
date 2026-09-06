@@ -10,8 +10,9 @@ Ordem recomendada:
 3. `003_asaas_and_security.sql` — colunas da Asaas e RLS ligado
 4. `004_seed_gifts.sql` — cadastra o catálogo padrão de presentes
 5. `005_order_installments.sql` — colunas de parcelamento nos pedidos
+6. `006_order_fee_breakdown.sql` — valor dos presentes, taxa repassada e parcelas escolhidas
 
-`all.sql` contém os scripts de schema (001, 002, 003 e 005) em ordem, sem o seed.
+`all.sql` contém os scripts de schema (001, 002, 003, 005 e 006) em ordem, sem o seed.
 
 `004_seed_gifts.sql` é gerado a partir de `netlify/functions/_gift-catalog.js`
 com `npm run seed:gifts:sql`. Também dá para cadastrar pelo painel /admin
