@@ -188,6 +188,13 @@ function setupAudioMusic(){
   bgAudio.addEventListener('error',()=>{musicDebug('erro de mídia code='+(bgAudio.error&&bgAudio.error.code));if(!unmuted){musicMode='youtube';(function(){var t=document.createElement('script');t.src='https://www.youtube.com/iframe_api';document.head.appendChild(t);})();}});
   musicReady=true;tryStartMusic();
 }
+// Autoplay com som é bloqueado pelos navegadores até o primeiro gesto do usuário.
+// Tentamos tocar ao carregar; se bloquear, tocamos (com som) no primeiro toque/clique/tecla em qualquer lugar.
+const MUSIC_GESTURES=['pointerup','touchend','click','keydown','pointerdown'];
+function setMusicUI(playing){musicPlaying=playing;const icon=document.getElementById('musicIcon'),lbl=document.getElementById('musicLbl');if(!icon||!lbl)return;icon.classList.toggle('spin',playing);lbl.textContent=playing?'Pausar':'Tocar música';}
+function unmuteOnInteraction(ev){if(musicUserStopped)return;if(musicMode==='audio'){if(bgAudio&&!bgAudio.paused)return;}else if(unmuted)return;musicDebug('gesto: '+(ev&&ev.type));tryStartMusic();}
+function removeMusicGestures(){MUSIC_GESTURES.forEach(ev=>document.removeEventListener(ev,unmuteOnInteraction));}
+MUSIC_GESTURES.forEach(ev=>document.addEventListener(ev,unmuteOnInteraction,{passive:true}));
 initMusic();
 // A música é um player do YouTube escondido. Os navegadores (Android/iOS/desktop) bloqueiam áudio
 // automático até o primeiro gesto do usuário, e nem sempre avisam. Por isso: tentamos tocar ao
@@ -274,13 +281,6 @@ function setupGalleryLightbox(){
   document.addEventListener('keydown',event=>{if(event.key==='Escape'&&lightbox.classList.contains('open'))close();});
 }
 setupGalleryLightbox();
-// Autoplay com som é bloqueado pelos navegadores até o primeiro gesto do usuário.
-// Tentamos tocar ao carregar; se bloquear, tocamos (com som) no primeiro toque/clique/tecla em qualquer lugar.
-const MUSIC_GESTURES=['pointerup','touchend','click','keydown','pointerdown'];
-function setMusicUI(playing){musicPlaying=playing;const icon=document.getElementById('musicIcon'),lbl=document.getElementById('musicLbl');if(!icon||!lbl)return;icon.classList.toggle('spin',playing);lbl.textContent=playing?'Pausar':'Tocar música';}
-function unmuteOnInteraction(ev){if(musicUserStopped)return;if(musicMode==='audio'){if(bgAudio&&!bgAudio.paused)return;}else if(unmuted)return;musicDebug('gesto: '+(ev&&ev.type));tryStartMusic();}
-function removeMusicGestures(){MUSIC_GESTURES.forEach(ev=>document.removeEventListener(ev,unmuteOnInteraction));}
-MUSIC_GESTURES.forEach(ev=>document.addEventListener(ev,unmuteOnInteraction,{passive:true}));
 function toggleMusic(){if(!musicReady)return;if(musicPlaying){musicUserStopped=true;try{if(musicMode==='audio')bgAudio.pause();else ytPlayer.pauseVideo();}catch(e){}setMusicUI(false);}else{musicUserStopped=false;tryStartMusic();}}
 function openRsvpModal(){
   const modal=document.getElementById('confirmar');
