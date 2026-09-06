@@ -2,9 +2,8 @@ const crypto = require('node:crypto');
 const { json } = require('./_http');
 const { getCatalogGiftsById, saveOrder } = require('./_db');
 
-// Asaas aceita de 1 a 21 parcelas no checkout. Ajustável por variável de ambiente.
-const MAX_INSTALLMENTS = Math.min(21, Math.max(1, Number(process.env.ASAAS_MAX_INSTALLMENTS || 21)));
-const INSTALLMENT_MIN_TOTAL_CENTS = Math.round(Number(process.env.ASAAS_INSTALLMENT_MIN_TOTAL_BRL || 500) * 100);
+// Qualquer valor parcela em até 10x no cartão (a Asaas aceita até 21). Ajustável por variável de ambiente.
+const MAX_INSTALLMENTS = Math.min(21, Math.max(1, Number(process.env.ASAAS_MAX_INSTALLMENTS || 10)));
 
 function apiBase() {
   return process.env.ASAAS_ENV === 'sandbox'
@@ -48,9 +47,7 @@ exports.handler = async (event) => {
     const customerName = String(payload.name || '').trim().slice(0, 120);
     const giftMessage = String(payload.message || '').slice(0, 1000);
     // Asaas só para cartão de crédito; Pix é feito direto na chave dos noivos (pix-order.js).
-    // Parcelamento só quando o total passa de R$ 500,00; abaixo disso o cartão vai em 1x.
     const amountTotal = items.reduce((sum, item) => sum + item.amount, 0);
-    const installmentsAllowed = amountTotal > INSTALLMENT_MIN_TOTAL_CENTS;
     const origin = process.env.URL || event.headers.origin || 'http://localhost:8888';
     const minutesToExpire = Math.min(1440, Math.max(10, Number(process.env.ASAAS_CHECKOUT_EXPIRATION_MINUTES || 30)));
 
@@ -74,8 +71,8 @@ exports.handler = async (event) => {
       },
       body: JSON.stringify({
         billingTypes: ['CREDIT_CARD'],
-        chargeTypes: installmentsAllowed ? ['DETACHED', 'INSTALLMENT'] : ['DETACHED'],
-        ...(installmentsAllowed ? { installment: { maxInstallmentCount: MAX_INSTALLMENTS } } : {}),
+        chargeTypes: ['DETACHED', 'INSTALLMENT'],
+        installment: { maxInstallmentCount: MAX_INSTALLMENTS },
         minutesToExpire,
         externalReference: orderId,
         callback: {
@@ -112,8 +109,7 @@ exports.handler = async (event) => {
     return json(200, {
       orderId,
       checkoutId: checkout.id,
-      installmentsAllowed,
-      maxInstallments: installmentsAllowed ? MAX_INSTALLMENTS : 1,
+      maxInstallments: MAX_INSTALLMENTS,
       url: checkout.url || `${checkoutBase()}/checkoutSession/show?id=${encodeURIComponent(checkout.id)}`
     });
   } catch (error) {

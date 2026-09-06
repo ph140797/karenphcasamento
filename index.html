@@ -314,9 +314,9 @@ document.getElementById('cfGuestsWrap').addEventListener('input',event=>{if(even
 let cart=[];
 const PIX_KEY='11953396177';
 const PIX_QR_CODE_IMAGE='/assets/pix-qr-code.png';
-// Mesma regra do backend (create-checkout-session.js): parcela só acima de R$ 500,00, até o máximo da Asaas.
-const INSTALLMENT_MIN_TOTAL=500,MAX_INSTALLMENTS=21;
-function cardHint(total){return total>INSTALLMENT_MIN_TOTAL?`Parcele em até ${MAX_INSTALLMENTS}x · pagamento seguro pela Asaas`:`Pagamento em 1x no cartão (parcelamento a partir de ${fmtBRL(INSTALLMENT_MIN_TOTAL)}) · seguro pela Asaas`;}
+// Mesma regra do backend (create-checkout-session.js): qualquer valor parcela em até 10x.
+const MAX_INSTALLMENTS=10;
+function cardHint(total){return `Parcele em até ${MAX_INSTALLMENTS}x · pagamento seguro pela Asaas`;}
 function cartTotal(){return cart.reduce((s,i)=>s+parseFloat(i.price.replace('R$ ','').replace(/\./g,'').replace(',','.')),0);}
 function fmtBRL(v){return 'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function updateCartUI(){
