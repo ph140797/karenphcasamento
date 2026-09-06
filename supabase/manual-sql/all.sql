@@ -105,3 +105,10 @@ alter table if exists public.wedding_orders enable row level security;
 alter table if exists public.wedding_rsvps enable row level security;
 alter table if exists public.wedding_gifts enable row level security;
 
+-- 004_order_installments.sql
+
+-- Registro do parcelamento liberado em cada pedido (create-checkout-session.js).
+alter table if exists public.wedding_orders
+  add column if not exists installments_allowed boolean not null default false,
+  add column if not exists max_installments integer not null default 1;
+
