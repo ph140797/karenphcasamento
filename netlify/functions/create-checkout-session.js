@@ -41,6 +41,10 @@ exports.handler = async (event) => {
     if (!items.length) return json(400, { error: 'Carrinho vazio ou presentes inválidos.' });
 
     const orderId = crypto.randomUUID();
+    const customerName = String(payload.name || '').trim().slice(0, 120);
+    const giftMessage = String(payload.message || '').slice(0, 1000);
+    // Asaas só para cartão de crédito; Pix é feito direto na chave dos noivos (pix-order.js).
+    const maxInstallments = Math.min(21, Math.max(1, Number(process.env.ASAAS_MAX_INSTALLMENTS || 10)));
     const amountTotal = items.reduce((sum, item) => sum + item.amount, 0);
     const origin = process.env.URL || event.headers.origin || 'http://localhost:8888';
     const minutesToExpire = Math.min(1440, Math.max(10, Number(process.env.ASAAS_CHECKOUT_EXPIRATION_MINUTES || 30)));
@@ -48,11 +52,12 @@ exports.handler = async (event) => {
     await saveOrder({
       id: orderId,
       status: 'checkout_created',
-      payment_method: 'asaas_checkout',
+      payment_method: 'credit_card',
       amount_total: amountTotal,
       currency: 'brl',
       items,
-      gift_message: String(payload.message || '').slice(0, 1000),
+      customer_name: customerName || null,
+      gift_message: giftMessage,
       created_at: new Date().toISOString()
     });
 
@@ -63,8 +68,9 @@ exports.handler = async (event) => {
         access_token: process.env.ASAAS_API_KEY
       },
       body: JSON.stringify({
-        billingTypes: ['PIX', 'CREDIT_CARD'],
-        chargeTypes: ['DETACHED'],
+        billingTypes: ['CREDIT_CARD'],
+        chargeTypes: ['DETACHED', 'INSTALLMENT'],
+        installment: { maxInstallmentCount: maxInstallments },
         minutesToExpire,
         externalReference: orderId,
         callback: {
@@ -73,7 +79,8 @@ exports.handler = async (event) => {
           expiredUrl: `${origin}/#presentes`
         },
         items: items.map((item) => ({
-          name: item.name,
+          name: item.name.slice(0, 30),
+          description: 'Presente de casamento Karen & Paulo Henrique'.slice(0, 150),
           quantity: 1,
           value: item.amount / 100
         }))
@@ -87,12 +94,13 @@ exports.handler = async (event) => {
     await saveOrder({
       id: orderId,
       status: 'checkout_created',
-      payment_method: 'asaas_checkout',
+      payment_method: 'credit_card',
       amount_total: amountTotal,
       currency: 'brl',
       items,
       asaas_checkout_id: checkout.id,
-      gift_message: String(payload.message || '').slice(0, 1000),
+      customer_name: customerName || null,
+      gift_message: giftMessage,
       created_at: new Date().toISOString()
     });
 
