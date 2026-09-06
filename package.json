@@ -6,9 +6,11 @@
   "scripts": {
     "build": "npm run check",
     "dev": "netlify dev",
-    "migrate": "node scripts/migrate-supabase.js",
     "start": "netlify dev",
-    "check": "node --check scripts/migrate-supabase.js && node --check netlify/functions/*.js"
+    "migrate": "node scripts/migrate-supabase.js",
+    "seed:gifts": "node scripts/seed-gifts.js",
+    "seed:gifts:sql": "node scripts/seed-gifts.js --sql",
+    "check": "node --check scripts/migrate-supabase.js && node --check scripts/seed-gifts.js && for f in netlify/functions/*.js; do node --check \"$f\" || exit 1; done"
   },
   "dependencies": {
     "@netlify/blobs": "^8.2.0",

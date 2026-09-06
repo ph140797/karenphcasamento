@@ -451,5 +451,8 @@ function shuffleGifts(items){const test=items.find(item=>item.id==='produto-test
 function render(){document.getElementById('giftsGrid').innerHTML=gifts.map((raw,i)=>{const g=normalizeGift(raw,i),giftId=String(g.id);return`<div class="gift-card${g.comic?' comic':''}" data-idx="${i}" data-gift-id="${giftId}"><div class="in-cart-badge">No carrinho</div><img class="gift-img" src="${g.img||PH}" alt="${g.name}" onerror="this.src=PH"><div class="gift-body">${g.comic?'<span class="comic-tag">&#127881; Especial</span>':''}<div class="gift-name">${g.name}</div><div class="gift-price">${g.price}</div><div class="gift-store">${g.store}</div><div class="gift-btn-row"><button class="gift-btn-add" onclick="addToCart(${i})">Adicionar ao carrinho</button><button class="gift-btn-remove" onclick="removeFromCartByIdx(${i})" title="Remover">&#10005;</button></div></div></div>`}).join('');updateCartUI();}
 
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500);}
+// Catálogo: renderiza o padrão (fixo acima) e em seguida troca pelo cadastrado no banco via /api/gifts.
+async function loadGiftCatalog(){try{const res=await fetch('/api/gifts',{cache:'no-store'});const data=await res.json();if(res.ok&&Array.isArray(data.gifts)&&data.gifts.length&&cart.length===0){gifts=shuffleGifts(data.gifts).map(normalizeGift);render();}}catch(e){/* mantém o catálogo padrão */}}
 gifts=shuffleGifts(gifts).map(normalizeGift);render();
+loadGiftCatalog();
 </script></body></html>

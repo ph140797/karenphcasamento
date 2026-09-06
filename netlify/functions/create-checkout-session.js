@@ -1,7 +1,6 @@
 const crypto = require('node:crypto');
 const { json } = require('./_http');
-const { saveOrder } = require('./_db');
-const { giftsById } = require('./_gift-catalog');
+const { getCatalogGiftsById, saveOrder } = require('./_db');
 
 function apiBase() {
   return process.env.ASAAS_ENV === 'sandbox'
@@ -15,9 +14,21 @@ function checkoutBase() {
     : 'https://asaas.com';
 }
 
-function normalizeItems(items) {
+// Itens vêm do cliente só com o id; nome e valor saem do catálogo (banco ou padrão),
+// nunca do payload.
+function normalizeItems(items, giftsById) {
   if (!Array.isArray(items)) return [];
-  return items.slice(0, 43).map((item) => giftsById.get(String(item.id || ''))).filter(Boolean);
+  return items
+    .slice(0, 50)
+    .map((item) => giftsById.get(String(item.id || '')))
+    .filter(Boolean)
+    .map((gift) => ({
+      id: String(gift.id),
+      name: String(gift.name),
+      amount: Math.round(Number(gift.amount ?? gift.price ?? 0)),
+      image: gift.image || ''
+    }))
+    .filter((gift) => gift.amount > 0);
 }
 
 exports.handler = async (event) => {
@@ -26,7 +37,7 @@ exports.handler = async (event) => {
 
   try {
     const payload = JSON.parse(event.body || '{}');
-    const items = normalizeItems(payload.items);
+    const items = normalizeItems(payload.items, await getCatalogGiftsById());
     if (!items.length) return json(400, { error: 'Carrinho vazio ou presentes inválidos.' });
 
     const orderId = crypto.randomUUID();

@@ -50,7 +50,10 @@
   <div class="admin-shell" id="adminShell" hidden>
     <header>
       <h1>Admin de Presentes</h1>
-      <button id="refreshBtn">Atualizar</button>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <span id="storageBadge" class="muted" style="font-size:12px;letter-spacing:.1em;text-transform:uppercase"></span>
+        <button id="refreshBtn">Atualizar</button>
+      </div>
     </header>
     <main>
     <p id="adminStatus" class="error"></p>
@@ -61,7 +64,27 @@
       <div class="metric"><b id="guestCount">0</b><span>Convidados</span></div>
     </section>
     <section class="table-wrap">
-      <h2>Presentes</h2>
+      <div class="section-head">
+        <h2>Cadastro de presentes <span id="giftSource" class="muted" style="font-size:12px;font-family:Jost,sans-serif"></span></h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button id="seedGiftsBtn" class="ghost" title="Cadastra no banco os presentes que estão fixos no site">Importar catálogo do site</button>
+          <button id="saveGiftsBtn">Salvar presentes</button>
+        </div>
+      </div>
+      <div class="gift-form">
+        <div><label for="giftImage">Imagem</label><input id="giftImage" placeholder="https://... ou assets/..."></div>
+        <div><label for="giftName">Nome</label><input id="giftName" placeholder="Nome do presente"></div>
+        <div><label for="giftValue">Valor</label><input id="giftValue" placeholder="450,00"></div>
+        <div><label for="giftSpecial">Especial</label><input id="giftSpecial" type="checkbox"></div>
+        <button id="addGiftBtn" class="ghost">Adicionar</button>
+      </div>
+      <table>
+        <thead><tr><th>Imagem</th><th>Nome</th><th>Valor</th><th>Especial</th><th>Ações</th></tr></thead>
+        <tbody id="gifts"><tr><td colspan="5" class="muted">Informe o token para carregar.</td></tr></tbody>
+      </table>
+    </section>
+    <section class="table-wrap">
+      <h2>Pedidos</h2>
       <table>
         <thead><tr><th>Data</th><th>Status</th><th>Método</th><th>Cliente</th><th>Valor</th><th>Presentes</th><th>Ações</th></tr></thead>
         <tbody id="orders"><tr><td colspan="7" class="muted">Informe o token para carregar.</td></tr></tbody>
@@ -87,6 +110,7 @@
     const loginScreen = document.getElementById('loginScreen');
     const adminShell = document.getElementById('adminShell');
     let rsvpList = [];
+    let giftCatalog = [];
     tokenInput.value = localStorage.getItem('weddingAdminToken') || '';
 
     function setMessage(message){
@@ -94,6 +118,17 @@
       adminStatusEl.textContent = message;
     }
     function money(cents){ return fmt.format((Number(cents) || 0) / 100); }
+    function centsFromBRL(value){
+      const normalized = String(value || '').replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.');
+      return Math.round((Number.parseFloat(normalized) || 0) * 100);
+    }
+    function escapeHtml(value){
+      return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+    }
+    function authHeaders(extra){
+      return { Authorization: `Bearer ${tokenInput.value.trim()}`, ...(extra || {}) };
+    }
+    const storageLabels = { supabase: 'Banco: Supabase', 'netlify-blobs': 'Banco: Netlify Blobs', 'local-files': 'Banco: arquivos locais (dev)' };
     function itemText(items){ return (items || []).map((item) => item.name).join(', '); }
     function setAuthenticated(){
       loginScreen.hidden = true;
@@ -104,11 +139,84 @@
       if(!token){ setMessage('Informe o ADMIN_TOKEN.'); return false; }
       const res = await fetch('/api/admin-auth', { headers: { Authorization: `Bearer ${token}` } });
       if(!res.ok){ setMessage('Token inválido.'); return false; }
+      const auth = await res.json().catch(() => ({}));
+      document.getElementById('storageBadge').textContent = storageLabels[auth.storage] || '';
       localStorage.setItem('weddingAdminToken', token);
       setAuthenticated();
       setMessage('');
       await loadOrders();
       return true;
+    }
+    function renderGifts(source){
+      if(source) document.getElementById('giftSource').textContent = source === 'static' ? '(catálogo padrão do site, ainda não salvo no banco)' : '';
+      document.getElementById('gifts').innerHTML = giftCatalog.length ? giftCatalog.map((gift, index) => `
+        <tr>
+          <td><img class="gift-thumb" src="${escapeHtml(gift.image || gift.img || '')}" alt="" onerror="this.style.display='none'"></td>
+          <td>${escapeHtml(gift.name)}</td>
+          <td>${money(gift.price)}</td>
+          <td>${gift.special ? 'Sim' : 'Não'}</td>
+          <td><button class="ghost" onclick="removeGift(${index})">Remover</button></td>
+        </tr>
+      `).join('') : '<tr><td colspan="5" class="muted">Nenhum presente cadastrado.</td></tr>';
+    }
+    async function loadGifts(){
+      const res = await fetch('/api/gifts', { cache: 'no-store' });
+      const data = await res.json();
+      if(!res.ok){ setMessage(data.error || 'Não foi possível carregar o catálogo.'); return; }
+      giftCatalog = data.gifts || [];
+      renderGifts(data.source);
+    }
+    async function addGift(){
+      if(!tokenInput.value.trim()){ setMessage('Informe o ADMIN_TOKEN.'); return; }
+      const image = document.getElementById('giftImage').value.trim();
+      const name = document.getElementById('giftName').value.trim();
+      const price = centsFromBRL(document.getElementById('giftValue').value.trim());
+      const special = document.getElementById('giftSpecial').checked;
+      if(!name || !price){ setMessage('Informe nome e valor do presente.'); return; }
+      const res = await fetch('/api/gifts', {
+        method: 'POST',
+        headers: authHeaders({ 'content-type': 'application/json' }),
+        body: JSON.stringify({ image, name, price, special, store: special ? 'Contribuição especial' : 'Presente de casamento', active: true })
+      });
+      const data = await res.json();
+      if(!res.ok){ setMessage(data.error || 'Não foi possível adicionar presente.'); return; }
+      giftCatalog = data.gifts || [];
+      ['giftImage','giftName','giftValue'].forEach((id) => { document.getElementById(id).value = ''; });
+      document.getElementById('giftSpecial').checked = false;
+      setMessage('Presente adicionado.');
+      renderGifts(data.source);
+    }
+    function removeGift(index){
+      giftCatalog.splice(index, 1);
+      renderGifts();
+      setMessage('Clique em "Salvar presentes" para confirmar a remoção.');
+    }
+    async function saveGifts(){
+      if(!tokenInput.value.trim()){ setMessage('Informe o ADMIN_TOKEN.'); return; }
+      const res = await fetch('/api/gifts', {
+        method: 'PUT',
+        headers: authHeaders({ 'content-type': 'application/json' }),
+        body: JSON.stringify({ gifts: giftCatalog })
+      });
+      const data = await res.json();
+      if(!res.ok){ setMessage(data.error || 'Não foi possível salvar presentes.'); return; }
+      giftCatalog = data.gifts || [];
+      renderGifts(data.source);
+      setMessage('Presentes salvos.');
+    }
+    async function seedGifts(){
+      if(!tokenInput.value.trim()){ setMessage('Informe o ADMIN_TOKEN.'); return; }
+      const overwrite = confirm('Importar o catálogo fixo do site para o banco.\n\nOK = também atualizar nome/preço/imagem dos que já existem.\nCancelar = só cadastrar os que faltam.');
+      const res = await fetch('/api/gifts-seed', {
+        method: 'POST',
+        headers: authHeaders({ 'content-type': 'application/json' }),
+        body: JSON.stringify({ overwrite })
+      });
+      const data = await res.json();
+      if(!res.ok){ setMessage(data.error || 'Não foi possível importar o catálogo.'); return; }
+      giftCatalog = data.gifts || [];
+      renderGifts('db');
+      setMessage(`Catálogo importado: ${data.inserted} novos, ${data.updated} atualizados, ${data.skipped} mantidos.`);
     }
     async function markOrderPaid(id){
       const token = tokenInput.value.trim();
@@ -130,7 +238,8 @@
       setMessage('');
       const [ordersRes, rsvpsRes] = await Promise.all([
         fetch('/api/admin-orders', { headers: { Authorization: `Bearer ${token}` } }),
-        fetch('/api/admin-rsvps', { headers: { Authorization: `Bearer ${token}` } })
+        fetch('/api/admin-rsvps', { headers: { Authorization: `Bearer ${token}` } }),
+        loadGifts().catch((error) => setMessage(error.message || 'Não foi possível carregar o catálogo.'))
       ]);
       const ordersData = await ordersRes.json();
       const rsvpsData = await rsvpsRes.json();
@@ -201,6 +310,9 @@
     document.getElementById('saveTokenBtn').addEventListener('click', validateToken);
     tokenInput.addEventListener('keydown', (event) => { if(event.key === 'Enter') validateToken(); });
     document.getElementById('refreshBtn').addEventListener('click', loadOrders);
+    document.getElementById('addGiftBtn').addEventListener('click', addGift);
+    document.getElementById('saveGiftsBtn').addEventListener('click', saveGifts);
+    document.getElementById('seedGiftsBtn').addEventListener('click', seedGifts);
     document.getElementById('exportRsvpsBtn').addEventListener('click', exportRsvpsCsv);
   </script>
 </body>

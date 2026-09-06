@@ -1,13 +1,17 @@
-Manual Supabase SQL scripts
+Scripts SQL manuais do Supabase
 
-Run these scripts in the Supabase SQL Editor when you want to apply schema changes manually.
+Rode no SQL Editor do Supabase quando quiser aplicar o schema manualmente
+(alternativa ao `npm run migrate`, que usa `supabase/migrations/`).
 
-Recommended order:
+Ordem recomendada:
 
-1. `001_wedding_schema.sql`
-2. `002_pix_and_gift_admin.sql`
-3. `003_seed_gifts.sql`
+1. `001_wedding_schema.sql` — tabelas wedding_orders, wedding_rsvps, wedding_gifts
+2. `002_pix_and_gift_admin.sql` — colunas de Pix e admin de presentes
+3. `003_asaas_and_security.sql` — colunas da Asaas e RLS ligado
+4. `004_seed_gifts.sql` — cadastra o catálogo padrão de presentes
 
-You can also run `all.sql`, which contains the schema scripts in order.
+`all.sql` contém os scripts de schema (001 a 003) em ordem, sem o seed.
 
-`003_seed_gifts.sql` inserts or updates the gifts scraped from the original static catalog.
+`004_seed_gifts.sql` é gerado a partir de `netlify/functions/_gift-catalog.js`
+com `npm run seed:gifts:sql`. Também dá para cadastrar pelo painel /admin
+(botão "Importar catálogo do site") ou com `npm run seed:gifts`.
