@@ -104,8 +104,6 @@ exports.handler = async (event) => {
       currency: 'brl',
       items,
       asaas_checkout_id: checkout.id,
-      installments_allowed: installmentsAllowed,
-      max_installments: installmentsAllowed ? MAX_INSTALLMENTS : 1,
       customer_name: customerName || null,
       gift_message: giftMessage,
       created_at: new Date().toISOString()
