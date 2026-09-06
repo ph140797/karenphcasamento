@@ -3,6 +3,11 @@
   publish = "."
   functions = "netlify/functions"
 
+[build.environment]
+  # ASAAS_ENV só guarda o nome do ambiente da Asaas (sandbox/production), não é segredo.
+  # Sem isso o scanner da Netlify falha o deploy ao achar o valor em .env.example e README.
+  SECRETS_SCAN_OMIT_KEYS = "ASAAS_ENV"
+
 [functions]
   node_bundler = "esbuild"
 
